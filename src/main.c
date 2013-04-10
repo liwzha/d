@@ -23,6 +23,7 @@
 #include "server_behavior.h"
 #include "simclist.h"
 
+#define BACKLOG 10
 void sigchld_handler(int s){
        while(waitpid(-1,NULL,WNOHANG) > 0 );
 }
@@ -33,8 +34,8 @@ int main(int argc, char *argv[])
 	char *port = "7776", *passwd = NULL;
         int serverSocket, clientSocket;
         struct addrinfo hints, *servinfo, *p;
-        struct sockaddr_in serverAddr;
-        struct sockaddr_storage clientAddr; // connector's address information
+        struct sockaddr_in serverAddr, clientAddr;
+        //struct sockaddr_storage clientAddr; // connector's address information
         socklen_t sinSize;
         struct sigaction sa;
         int yes=1;
@@ -68,56 +69,65 @@ int main(int argc, char *argv[])
 	}
 
         /* ****** setting up server socket ****** */
-        memset(&hints, 0, sizeof hints);
-        hints.ai_family = AF_INET;
-        hints.ai_socktype = SOCK_STREAM;
-        hints.ai_flags = AI_PASSIVE;
+       // memset(&hints, 0, sizeof hints);
+       // hints.ai_family = AF_INET;
+       // hints.ai_socktype = SOCK_STREAM;
+       // hints.ai_flags = AI_PASSIVE;
 
-        if ((rv = getaddrinfo(NULL, port, &hints, &servinfo)) != 0) {
-              fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-              return 1;
-        }
-        for (p = servinfo; p != NULL; p = p->ai_next) {
-              if ((serverSocket = socket(p->ai_family, p->ai_socktype,
-                          p->ai_protocol)) == -1) {
-                    perror("server: socket");
-                    continue;
-              }
+       // if ((rv = getaddrinfo(NULL, port_ns, &hints, &servinfo)) != 0) {
+       //       fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+       //       return 1;
+       // }
+       // for (p = servinfo; p != NULL; p = p->ai_next) {
+       //       if ((serverSocket = socket(p->ai_family, p->ai_socktype,
+       //                   p->ai_protocol)) == -1) {
+       //             perror("server: socket");
+       //             continue;
+       //       }
       
-              if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &yes,
-                          sizeof(int)) == -1){
-                    perror("setsockopt");
-                    exit(1);
-              }
-             
-              if (bind(serverSocket, p->ai_addr,p->ai_addrlen) == -1) {
-                    close(serverSocket);
-                    perror("server: bind");
-                    continue;
-              }
-              break;
-        }
+       //       if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &yes,
+       //                   sizeof(int)) == -1){
+       //             perror("setsockopt");
+       //             exit(1);
+       //       }
+       //      
+       //       if (bind(serverSocket, p->ai_addr,p->ai_addrlen) == -1) {
+       //             close(serverSocket);
+       //             perror("server: bind");
+       //             continue;
+       //       }
+       //       break;
+       // }
 
-        if (p==NULL) {
-              fprintf(stderr, "server: failed to bind\n");
-              return 2; 
-        }
-         
-        freeaddrinfo(servinfo); // all done with this structure
+       // if (p==NULL) {
+       //       fprintf(stderr, "server: failed to bind\n");
+       //       return 2; 
+       // }
+       //  
+       // freeaddrinfo(servinfo); // all done with this structure
 
-        if (listen(serverSocket, 5) == -1) {
-              perror("listen");
-              exit(1);
-        }
+       // if (listen(serverSocket, BACKLOG) == -1) {
+       //       perror("listen");
+       //       exit(1);
+       // }
 
-        sa.sa_handler = sigchld_handler; // reap all dead processes
-        sigemptyset(&sa.sa_mask);
-        sa.sa_flags = SA_RESTART;
-        if (sigaction(SIGCHLD, &sa, NULL) == -1) {
-            perror("sigaction");
-            exit(1);
-        }
+       // sa.sa_handler = sigchld_handler; // reap all dead processes
+       // sigemptyset(&sa.sa_mask);
+       // sa.sa_flags = SA_RESTART;
+       // if (sigaction(SIGCHLD, &sa, NULL) == -1) {
+       //     perror("sigaction");
+       //     exit(1);
+       // }
+       
+        memset(&serverAddr, 0, sizeof(serverAddr));
+        serverAddr.sin_family = AF_INET;
+        serverAddr.sin_port = htons(7776);
+        serverAddr.sin_addr.s_addr = INADDR_ANY;
 
+        serverSocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+        setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
+        bind(serverSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr));
+        listen(serverSocket, BACKLOG);
 
         printf("server: waiting for connections...\n");
         /* ****** main accept() loop ****** */
@@ -136,7 +146,7 @@ int main(int argc, char *argv[])
               s, sizeof s);
               clientHostName = strdup(gethostbyaddr(s,4,AF_INET)); */
               if (!fork()) { // this is the child process
-                   // close(serverSocket);
+                 close(serverSocket);
         
                     /* *** expect for user's connection *** */
                  while(1){
@@ -166,7 +176,5 @@ printf("msg:%s\n",msg);
               close(clientSocket);
         }
    
-        close(serverSocket);
-
 	return 0;
 }
