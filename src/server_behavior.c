@@ -20,13 +20,14 @@ user_info* find_by_nick( list_t *userlist, char * nick_query ){
 
 char* con_rpl_welcome( user_info server, user_info usr ){
     char* rpl = malloc( sizeof(char)*MAX_MSG_LEN );
-    sprintf(rpl,"%s %d %s :Welcome to the Internet Relay Network %s!%s@%s",
+    sprintf(rpl,"%s %s %s :Welcome to the Internet Relay Network %s!%s@%s",
       con_userinfo_str(server),
       RPL_WELCOME,
       usr.ui_nick,
       usr.ui_nick,
       usr.ui_username,
       usr.ui_hostname); 
+fprintf(stderr,"con_rel_welcome:  \n%s",rpl);
     return rpl;
 }
 
@@ -39,4 +40,17 @@ void send_rpl( int clientSocket, char* msg ){
     msg_to_send[slen-1] = '\r';
     msg_to_send[slen] = '\n';
     send(clientSocket, msg_to_send, slen+1, 0);
+}
+
+void recv_msg( int clientSocket, char *buf, int *buf_offset, char *msg, int *msg_offset ){
+    int numbytes,flag;
+    if(( numbytes = recv( clientSocket, buf+(*buf_offset), MAX_MSG_LEN, 0 )) == -1 )
+        perror("recv");
+    while( (flag=extract_message(buf,buf_offset,numbytes,msg,msg_offset))==-1 ){
+        if(( numbytes = recv( clientSocket, buf+(*buf_offset), MAX_MSG_LEN, 0 )) == -1 )
+            perror("recv");
+printf("recv_msg out , buf offset = %d, flag = %d\n",*buf_offset,flag);
+    }
+
+printf("recv_msg out , buf offset = %d, flag = %d\n",*buf_offset,flag);
 }

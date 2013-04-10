@@ -15,12 +15,10 @@ enum cmd_name {NICK, USER, WHOIS, MODE, JOIN};
 enum cmd_name parse_message(char * msg, char ** prefix, list_t* param_list);
 
 // process a raw message received from client
-// return 0 if raw_msg is not a complete message
-// return 1 if raw_msg contains a complete message, take out the message and store it in msg
 // raw_msg will be left with anything remaining after '\r\n'
 
 // len indicate the length of raw_msg
-int extract_message(char **raw_msg, int len,  char **msg); 
+int extract_message(char *buf, int* buf_offset, int len,  char *msg, int * msg_offset); 
 
 // convert string to command
 // string needs to be null terminated

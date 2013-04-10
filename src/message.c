@@ -1,21 +1,46 @@
 #include "message.h"
 
-int extract_message(char **raw_msg, int len, char **msg){
-    int i,j;
+// return 0: if exact one complete msg
+// return 1: if contains more than one complete msg
+// return -1: if msg incomplete
+int extract_message(char *buf, int* buf_offset, int len, char *msg, int*msg_offset){
+printf("extract_message in, len = %d, buf offset=%d,msg offset=%d\n",len, *buf_offset,*msg_offset);
+    int i,j,flag,reader=0;
+for(i=0;i<len;i++)
+    printf("%c",(buf+(*buf_offset))[i]);
+printf("\n");
+    len += (*buf_offset); 
     if( len<=0 )
         fprintf(stderr,"extract_message: raw message has length zero!!!\n");
-    for( i=1; i<len && !((*raw_msg)[i-1] == '\r' && (*raw_msg)[i] == '\n' ); i++ )
-      ;
-    *msg = (char*) malloc(sizeof(char)*i);
-    for( j=0; j<i-1; j++ )
-{
-        (*msg)[j] = (*raw_msg)[j];
-}
-    for( j=i+1; j<len; j++ )
-        (*raw_msg)[j-i-1] = (*raw_msg)[j];
-    (*raw_msg)[len-i-1] = '\0';
-    (*msg)[i-1] = '\0';
-    return i<len;
+    if( (*msg_offset) == -1 ){
+        msg[++(*msg_offset)] = buf[reader++];
+        printf("%c",buf[reader-1]);
+    }
+    for( ; reader < len && !(msg[(*msg_offset)-1] == '\r' && msg[*msg_offset] == '\n'); reader++){
+
+        msg[++(*msg_offset)] = buf[reader];
+        printf("%d--%c\n",reader,buf[reader]);
+    }
+
+    if(msg[(*msg_offset)-1] == '\r' && msg[*msg_offset] == '\n'){
+        if( reader==len ){ // if exact a complete msg
+            flag = 0;
+        }
+        else{ // if more than a complete msg
+            flag = 1;
+            for(i=0;i<(len-reader);i++)
+                buf[i] = buf[i+reader];
+        }
+        msg[(*msg_offset)-1] = '\0';
+        (*buf_offset) = len-reader;
+        (*msg_offset) = -1;
+    }
+    else{// if msg is incomplete
+        flag = -1;
+        //(*msg_offset)++;
+        *buf_offset = 0;
+    }
+    return flag;
 }
 
 // extract the first substring before a space

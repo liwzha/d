@@ -38,14 +38,15 @@ int main(int argc, char *argv[])
         socklen_t sinSize;
         struct sigaction sa;
         int yes=1;
-        int rv, numbytes; 
+        int rv, numbytes, buf_offset=0, msg_offset=-1,flag; 
         enum cmd_name cmd;
-        char *buf, *msg, *prefix, *nick, *username, *fullname, *hostname;
+        char *buf, *msg, *prefix, *nick, *username, *fullname, *hostname, *char_p;
         user_info usr, server;
         list_t user_list, param_list;
         list_init(&user_list);// list of user_info *
         server = create_user("","","","bar.example.com"); //TODO: find server hostname on run-time
-        buf = malloc(sizeof(char)*MAX_MSG_LEN);  
+        buf = (char*)malloc(sizeof(char)*MAX_MSG_LEN);  
+        msg = (char*)malloc(sizeof(char)*MAX_MSG_LEN);  
 	while ((opt = getopt(argc, argv, "p:o:h")) != -1)
 		switch (opt)
 		{
@@ -138,9 +139,8 @@ int main(int argc, char *argv[])
                     close(serverSocket);
         
                     /* *** expect for user's connection *** */
-                    if( (numbytes=recv(clientSocket, buf, MAX_MSG_LEN, 0)) == -1 )
-                          perror("recv"); 
-                    extract_message(&buf, numbytes, &msg);
+                    recv_msg( clientSocket,buf,&buf_offset,msg,&msg_offset );
+printf("msg:%s\n",msg);
                     list_init(&param_list);
                     cmd = parse_message(msg,&prefix, &param_list);
                     if( cmd != NICK )
@@ -150,9 +150,8 @@ int main(int argc, char *argv[])
 // TODO: report nick already exists
 } 
                      
-                    if(( numbytes = recv( clientSocket, buf, MAX_MSG_LEN, 0 )) == -1 )
-                          perror("recv"); 
-                    extract_message(&buf, numbytes, &msg);
+                    recv_msg(clientSocket,buf,&buf_offset,msg,&msg_offset);
+printf("msg:%s\n",msg);
                     list_init(&param_list);
                     cmd = parse_message( msg, &prefix, &param_list );
                     if( cmd != USER )
