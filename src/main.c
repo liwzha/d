@@ -38,10 +38,12 @@ int main(int argc, char *argv[])
         //struct sockaddr_storage clientAddr; // connector's address information
         socklen_t sinSize;
         struct sigaction sa;
+        struct hostent *serverHost, *clientHost;
         int yes=1;
         int rv, numbytes, buf_offset=0, msg_offset=-1,flag; 
         enum cmd_name cmd;
         char *buf, *msg, *prefix, *nick, *username, *fullname, *hostname;
+        char hostNameServer[512];
         user_info usr, server;
         list_t user_list, param_list;
         list_init(&user_list);// list of user_info *
@@ -68,57 +70,6 @@ int main(int argc, char *argv[])
 		exit(-1);
 	}
 
-        /* ****** setting up server socket ****** */
-       // memset(&hints, 0, sizeof hints);
-       // hints.ai_family = AF_INET;
-       // hints.ai_socktype = SOCK_STREAM;
-       // hints.ai_flags = AI_PASSIVE;
-
-       // if ((rv = getaddrinfo(NULL, port_ns, &hints, &servinfo)) != 0) {
-       //       fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-       //       return 1;
-       // }
-       // for (p = servinfo; p != NULL; p = p->ai_next) {
-       //       if ((serverSocket = socket(p->ai_family, p->ai_socktype,
-       //                   p->ai_protocol)) == -1) {
-       //             perror("server: socket");
-       //             continue;
-       //       }
-      
-       //       if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &yes,
-       //                   sizeof(int)) == -1){
-       //             perror("setsockopt");
-       //             exit(1);
-       //       }
-       //      
-       //       if (bind(serverSocket, p->ai_addr,p->ai_addrlen) == -1) {
-       //             close(serverSocket);
-       //             perror("server: bind");
-       //             continue;
-       //       }
-       //       break;
-       // }
-
-       // if (p==NULL) {
-       //       fprintf(stderr, "server: failed to bind\n");
-       //       return 2; 
-       // }
-       //  
-       // freeaddrinfo(servinfo); // all done with this structure
-
-       // if (listen(serverSocket, BACKLOG) == -1) {
-       //       perror("listen");
-       //       exit(1);
-       // }
-
-       // sa.sa_handler = sigchld_handler; // reap all dead processes
-       // sigemptyset(&sa.sa_mask);
-       // sa.sa_flags = SA_RESTART;
-       // if (sigaction(SIGCHLD, &sa, NULL) == -1) {
-       //     perror("sigaction");
-       //     exit(1);
-       // }
-       
         memset(&serverAddr, 0, sizeof(serverAddr));
         serverAddr.sin_family = AF_INET;
         serverAddr.sin_port = htons(7776);
@@ -139,41 +90,39 @@ int main(int argc, char *argv[])
                   continue;
               }
 
+              gethostname(hostNameServer,sizeof(hostNameServer));
+              serverHost = gethostbyname(hostNameServer);
+              clientHost = gethostbyaddr((char *)&clientAddr.sin_addr.s_addr, sizeof(clientAddr.sin_addr.s_addr), AF_INET);
 
-              // TODO: get host name
-              /*inet_ntop(clientAddr.ss_family,
-              ((struct sockaddr_in*)clientAddr)->sin_addr,
-              s, sizeof s);
-              clientHostName = strdup(gethostbyaddr(s,4,AF_INET)); */
               if (!fork()) { // this is the child process
-                 close(serverSocket);
+                  close(serverSocket);
         
                     /* *** expect for user's connection *** */
-                 while(1){
+                  while(1){
 
-                    recv_msg( clientSocket,buf,&buf_offset,msg,&msg_offset );
-printf("msg:%s\n",msg);
-                    list_init(&param_list);
-                    cmd = parse_message(msg,&prefix, &param_list);
-                    if( cmd == NICK ){
-                        nick = strdup((char *)list_get_at( &param_list, 0));
-                        if( find_by_nick( &user_list, nick) != NULL ){
+                      recv_msg( clientSocket,buf,&buf_offset,msg,&msg_offset );
+                      printf("msg:%s\n",msg);
+                      list_init(&param_list);
+                      cmd = parse_message(msg,&prefix, &param_list);
+                      if( cmd == NICK ){
+                          nick = strdup((char *)list_get_at( &param_list, 0));
+                          if( find_by_nick( &user_list, nick) != NULL ){
                             // TODO: report nick already exists
-                        } 
-                    }
-                    else if( cmd == USER ){
-                        username = list_get_at( &param_list, 0 );
-                        fullname = list_get_at( &param_list, 3 );
-                        hostname = strdup( "foo.example.com" ); //TODO: find user's host name in run-time
-                        usr = create_user( nick, username, fullname, hostname ); 
-                        list_append( &param_list, &usr);   
-                        buf = con_rpl_welcome( server, usr );
-                        send_rpl( clientSocket, buf );
-                        close_clientSocket( clientSocket );
-                    }
-                 }
-              }
-              close(clientSocket);
+                          } 
+                      }
+                      else if( cmd == USER ){
+                          username = list_get_at( &param_list, 0 );
+                          fullname = list_get_at( &param_list, 3 );
+                          hostname = strdup( clientHost->h_name ); 
+                          usr = create_user( nick, username, fullname, hostname ); 
+                          list_append( &param_list, &usr);   
+                          buf = con_rpl_welcome( server, usr );
+                          send_rpl( clientSocket, buf );
+                          close_clientSocket( clientSocket );
+                      }
+                   }
+                }
+                close(clientSocket);
         }
    
 	return 0;
