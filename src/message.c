@@ -4,11 +4,7 @@
 // return 1: if contains more than one complete msg
 // return -1: if msg incomplete
 int extract_message(char *buf, int* buf_offset, int len, char *msg, int*msg_offset){
-printf("extract_message in, len = %d, buf offset=%d,msg offset=%d\n",len, *buf_offset,*msg_offset);
     int i,j,flag,reader=0;
-for(i=0;i<len;i++)
-    printf("%c",(buf+(*buf_offset))[i]);
-printf("\n");
     len += (*buf_offset); 
     if( len<=0 )
         fprintf(stderr,"extract_message: raw message has length zero!!!\n");
@@ -19,7 +15,6 @@ printf("\n");
     for( ; reader < len && !(msg[(*msg_offset)-1] == '\r' && msg[*msg_offset] == '\n'); reader++){
 
         msg[++(*msg_offset)] = buf[reader];
-        printf("%d--%c\n",reader,buf[reader]);
     }
 
     if(msg[(*msg_offset)-1] == '\r' && msg[*msg_offset] == '\n'){
@@ -64,6 +59,7 @@ void parse_message_helper(char *msg, list_t *param_list, int is_front){
         parse_message_helper( substring+1, param_list, 0 ); 
 }
 enum cmd_name parse_message(char *msg, char **prefix, list_t *param_list){
+printf("parse_message in msg=%s\n",msg);
     list_init(param_list);
     char * substring, *cmd=NULL, *tmp;
     if( strlen(msg) == 0 ){

@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
         int yes=1;
         int rv, numbytes, buf_offset=0, msg_offset=-1,flag; 
         enum cmd_name cmd;
-        char *buf, *msg, *prefix, *nick, *username, *fullname, *hostname, *char_p;
+        char *buf, *msg, *prefix, *nick, *username, *fullname, *hostname;
         user_info usr, server;
         list_t user_list, param_list;
         list_init(&user_list);// list of user_info *
@@ -136,38 +136,37 @@ int main(int argc, char *argv[])
               s, sizeof s);
               clientHostName = strdup(gethostbyaddr(s,4,AF_INET)); */
               if (!fork()) { // this is the child process
-                    close(serverSocket);
+                   // close(serverSocket);
         
                     /* *** expect for user's connection *** */
+                 while(1){
+
                     recv_msg( clientSocket,buf,&buf_offset,msg,&msg_offset );
 printf("msg:%s\n",msg);
                     list_init(&param_list);
                     cmd = parse_message(msg,&prefix, &param_list);
-                    if( cmd != NICK )
-                        close_clientSocket(clientSocket);
-                    nick = strdup((char *)list_get_at( &param_list, 0));
-                    if( find_by_nick( &user_list, nick) != NULL ){
-// TODO: report nick already exists
-} 
-                     
-                    recv_msg(clientSocket,buf,&buf_offset,msg,&msg_offset);
-printf("msg:%s\n",msg);
-                    list_init(&param_list);
-                    cmd = parse_message( msg, &prefix, &param_list );
-                    if( cmd != USER )
-                        close_clientSocket(clientSocket);
-                    username = list_get_at( &param_list, 0 );
-                    fullname = list_get_at( &param_list, 3 );
-                    hostname = strdup( "foo.example.com" ); //TODO: find user's host name in run-time
-                    usr = create_user( nick, username, fullname, hostname ); 
-                    list_append( &param_list, &usr);   
-                    buf = con_rpl_welcome( server, usr );
-                    send_rpl( clientSocket, buf );
-                    close_clientSocket( clientSocket );
-
+                    if( cmd == NICK ){
+                        nick = strdup((char *)list_get_at( &param_list, 0));
+                        if( find_by_nick( &user_list, nick) != NULL ){
+                            // TODO: report nick already exists
+                        } 
+                    }
+                    else if( cmd == USER ){
+                        username = list_get_at( &param_list, 0 );
+                        fullname = list_get_at( &param_list, 3 );
+                        hostname = strdup( "foo.example.com" ); //TODO: find user's host name in run-time
+                        usr = create_user( nick, username, fullname, hostname ); 
+                        list_append( &param_list, &usr);   
+                        buf = con_rpl_welcome( server, usr );
+                        send_rpl( clientSocket, buf );
+                        close_clientSocket( clientSocket );
+                    }
+                 }
               }
               close(clientSocket);
         }
+   
+        close(serverSocket);
 
 	return 0;
 }

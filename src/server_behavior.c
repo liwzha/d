@@ -27,7 +27,6 @@ char* con_rpl_welcome( user_info server, user_info usr ){
       usr.ui_nick,
       usr.ui_username,
       usr.ui_hostname); 
-fprintf(stderr,"con_rel_welcome:  \n%s",rpl);
     return rpl;
 }
 
@@ -44,13 +43,14 @@ void send_rpl( int clientSocket, char* msg ){
 
 void recv_msg( int clientSocket, char *buf, int *buf_offset, char *msg, int *msg_offset ){
     int numbytes,flag;
-    if(( numbytes = recv( clientSocket, buf+(*buf_offset), MAX_MSG_LEN, 0 )) == -1 )
-        perror("recv");
-    while( (flag=extract_message(buf,buf_offset,numbytes,msg,msg_offset))==-1 ){
-        if(( numbytes = recv( clientSocket, buf+(*buf_offset), MAX_MSG_LEN, 0 )) == -1 )
+    if( (*buf_offset)==0 ){
+        if(( numbytes = recv( clientSocket, buf, MAX_MSG_LEN, 0 )) == -1 )
             perror("recv");
-printf("recv_msg out , buf offset = %d, flag = %d\n",*buf_offset,flag);
+    } else
+        numbytes = (*buf_offset);
+    while(( flag=extract_message(buf,buf_offset,numbytes,msg,msg_offset))==-1 ){
+            if(( numbytes = recv( clientSocket, buf+(*buf_offset), MAX_MSG_LEN, 0 )) == -1 )
+                perror("recv");
     }
 
-printf("recv_msg out , buf offset = %d, flag = %d\n",*buf_offset,flag);
 }
