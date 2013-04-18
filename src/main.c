@@ -8,122 +8,261 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <netdb.h>
 #include <arpa/inet.h>
-#include <sys/wait.h>
-#include <signal.h>
+#include <netdb.h>
+#include <stdbool.h>
+#include <pthread.h>
+#include <time.h>
+#include <errno.h>
+#include <string.h> /* memset */
+#include <unistd.h> /* close */
+#include <string.h>
+
+
 
 #include "user.h"
 #include "message.h"
 #include "server_behavior.h"
 #include "simclist.h"
 
+
 #define BACKLOG 10
+
+void *accept_clients();
+
+struct workerArgs
+{
+    int socket;
+    struct hostent *clientHost;
+    struct hostent *serverHost;
+
+};
+
+void *service_single_client(void *args);
+
 void sigchld_handler(int s){
-       while(waitpid(-1,NULL,WNOHANG) > 0 );
+    while(waitpid(-1,NULL,WNOHANG) > 0 );
 }
+
+// user_list can be modified by any process;
+list_t user_list;
 
 int main(int argc, char *argv[])
 {
-	int opt;
-	char *port = "7776", *passwd = NULL;
-        int serverSocket, clientSocket;
-        struct addrinfo hints, *servinfo, *p;
-        struct sockaddr_in serverAddr, clientAddr;
-        //struct sockaddr_storage clientAddr; // connector's address information
-        socklen_t sinSize;
-        struct sigaction sa;
-        struct hostent *serverHost, *clientHost;
-        int yes=1;
-        int rv, numbytes, buf_offset=0, msg_offset=-1,flag; 
-        enum cmd_name cmd;
-        char *buf, *msg, *prefix, *nick, *username, *fullname, *hostname;
-        char hostNameServer[512];
-        user_info usr, server;
-        list_t user_list, param_list;
-        list_init(&user_list);// list of user_info *
-        server = create_user("","","","bar.example.com"); //TODO: find server hostname on run-time
-        buf = (char*)malloc(sizeof(char)*MAX_MSG_LEN);  
-        msg = (char*)malloc(sizeof(char)*MAX_MSG_LEN);  
-	while ((opt = getopt(argc, argv, "p:o:h")) != -1)
-		switch (opt)
-		{
-			case 'p':
-				port = strdup(optarg);
-				break;
-			case 'o':
-				passwd = strdup(optarg);
-				break;
-			default:
-				printf("ERROR: Unknown option -%c\n", opt);
-				exit(-1);
-		}
+    int opt;
+	char *port = "6667", *passwd = NULL;
+    
+    pthread_t server_thread;
+    sigset_t new;
+    
+	/*while ((opt = getopt(argc, argv, "p:o:h")) != -1)
+     switch (opt)
+     {
+     case 'p':
+     port = strdup(optarg);
+     break;
+     case 'o':
+     passwd = strdup(optarg);
+     break;
+     default:
+     printf("ERROR: Unknown option -%c\n", opt);
+     exit(-1);
+     }
+     
+     if (!passwd)
+     {
+     fprintf(stderr, "ERROR: You must specify an operator password\n");
+     exit(-1);
+     }
+     */
+    
+    sigemptyset(&new);
+    sigaddset(&new, SIGPIPE);
+    if(pthread_sigmask(SIG_BLOCK,&new,NULL)!=0)
+    {
+        perror("Unable to mask SIGPIPE");
+        exit(-1);
+    }
+    
+    //Create Server Thread;
+    
+    if(pthread_create(&server_thread,NULL,accept_clients,NULL)<0)
+    {
+        perror("could not create server thread");
+        exit(-1);
+    }
+    pthread_join(server_thread,NULL);
+    pthread_exit(NULL);
+    
+    return 0;
+}
 
-	if (!passwd)
-	{
-		fprintf(stderr, "ERROR: You must specify an operator password\n");
-		exit(-1);
-	}
+void *accept_clients()
+{
+    int serverSocket;
+//    struct addrinfo hints, *servinfo, *p;
+    
 
-        memset(&serverAddr, 0, sizeof(serverAddr));
-        serverAddr.sin_family = AF_INET;
-        serverAddr.sin_port = htons(7776);
-        serverAddr.sin_addr.s_addr = INADDR_ANY;
+    
+    struct sockaddr_in serverAddr;
 
-        serverSocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-        setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
-        bind(serverSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr));
-        listen(serverSocket, BACKLOG);
+    
+    //struct sockaddr_storage clientAddr; // connector's address information
+    
+    socklen_t sinSize;
+    struct sigaction sa;
+    struct hostent *serverHost;
 
-        printf("server: waiting for connections...\n");
-        /* ****** main accept() loop ****** */
-        while(1) {
-              sinSize = sizeof clientAddr;
-              clientSocket = accept(serverSocket, (struct sockaddr *) &clientAddr, &sinSize);
-              if (clientSocket == -1) {
-                  perror("accept");
-                  continue;
-              }
-
-              gethostname(hostNameServer,sizeof(hostNameServer));
-              serverHost = gethostbyname(hostNameServer);
-              clientHost = gethostbyaddr((char *)&clientAddr.sin_addr.s_addr, sizeof(clientAddr.sin_addr.s_addr), AF_INET);
-
-              if (!fork()) { // this is the child process
-                  close(serverSocket);
+    
+    int yes=1;
+    
+    char hostNameServer[512];
+    
+    user_info server;
         
-                    /* *** expect for user's connection *** */
-                  while(1){
-
-                      recv_msg( clientSocket,buf,&buf_offset,msg,&msg_offset );
-                      printf("msg:%s\n",msg);
-                      list_init(&param_list);
-                      cmd = parse_message(msg,&prefix, &param_list);
-                      if( cmd == NICK ){
-                          nick = strdup((char *)list_get_at( &param_list, 0));
-                          if( find_by_nick( &user_list, nick) != NULL ){
-                            // TODO: report nick already exists
-                          } 
-                      }
-                      else if( cmd == USER ){
-                          username = list_get_at( &param_list, 0 );
-                          fullname = list_get_at( &param_list, 3 );
-                          hostname = strdup( clientHost->h_name ); 
-                          usr = create_user( nick, username, fullname, hostname ); 
-                          list_append( &param_list, &usr);   
-                          buf = con_rpl_welcome( server, usr );
-                          send_rpl( clientSocket, buf );
-                          close_clientSocket( clientSocket );
-                      }
-                   }
-                }
-                close(clientSocket);
-        }
+    list_init(&user_list);// list of user_info *
+    
+    
    
+    memset(&serverAddr, 0, sizeof(serverAddr));
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(7776);
+    serverAddr.sin_addr.s_addr = INADDR_ANY;
+    
+    serverSocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+    server = create_user("","","","bar.example.com",serverSocket); //TODO: find server hostname on run-time
+	
+    setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
+    bind(serverSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr));
+    listen(serverSocket, BACKLOG);
+    
+
+    
+
+    
+    
+    printf("server: waiting for connections...\n");
+    /* ****** main accept() loop ****** */
+    while(1) {
+        
+        
+        struct sockaddr_in clientAddr;
+        
+        sinSize = sizeof clientAddr;
+        
+        int clientSocket;
+        
+        clientSocket = accept(serverSocket, (struct sockaddr *) &clientAddr, &sinSize);
+        
+        if (clientSocket == -1) {
+            perror("accept");
+            continue;
+        
+        }
+        
+        pthread_t worker_thread;
+        struct workerArgs *wa;
+
+        struct hostent *clientHost;
+        gethostname(hostNameServer,sizeof(hostNameServer));
+        serverHost = gethostbyname(hostNameServer);
+        clientHost = gethostbyaddr((char *)&clientAddr.sin_addr.s_addr, sizeof(clientAddr.sin_addr.s_addr), AF_INET);
+                
+        //Connection Build: Then spawn a new thread;
+        
+        wa = malloc(sizeof(struct workerArgs));
+        wa ->socket = clientSocket;
+        wa->clientHost = clientHost;
+        wa->serverHost = serverHost;
+        
+        if(pthread_create(&worker_thread,NULL,service_single_client,wa)!=0)
+        {
+            perror("Could not create a worker thread;");
+            
+        }
+        
+        if (!fork()) { // this is the child process??Not sure about the function of fork??
+            close(serverSocket);
+            
+        }
+        close(clientSocket);
+    }
+    
 	return 0;
+}
+
+
+void *service_single_client(void *args) {
+    
+    int rv, numbytes, buf_offset=0, msg_offset=-1,flag;
+    enum cmd_name cmd;
+    char *buf, *msg, *prefix, *nick, *username, *fullname, *hostname;
+    buf = (char*)malloc(sizeof(char)*MAX_MSG_LEN);
+    msg = (char*)malloc(sizeof(char)*MAX_MSG_LEN);
+    list_t param_list;
+    user_info usr;
+	int socket, nbytes;
+	char tosend[100];
+    
+	/* Unpack the arguments */
+    struct workerArgs *wa;
+	wa = (struct workerArgs*) args;
+	int clientSocket = wa->socket;
+    struct hostent *clientHost = wa -> clientHost;
+    struct hostent *serverHost = wa -> serverHost;
+    
+    
+	/* This tells the pthreads library that no other thread is going to
+     join() this thread. This means that, once this thread terminates,
+     its resources can be safely freed (instead of keeping them around
+     so they can be collected by another thread join()-ing this thread) */
+	
+    pthread_detach(pthread_self());
+    
+	fprintf(stderr, "Socket %d connected\n", clientSocket);
+    
+    
+    usr=create_user("","","",clientHost->h_name,clientSocket);
+    /* add the user toe the userlist, accquire a lock here
+     */
+
+
+    /* *** expect for user's connection *** */
+    while(1){
+        
+        recv_msg(clientSocket,buf,&buf_offset,msg,&msg_offset );
+        printf("msg:%s\n",msg);
+        resp_to_cmd(usr, msg,user_list, serverHost->h_name);
+        
+    }
+    
+    /*
+	while(1)
+	{
+		sprintf(tosend,"%d -- Hello, socket!\n", time(NULL));
+        
+		nbytes = send(socket, tosend, strlen(tosend), 0);
+        
+		if (nbytes == -1 && (errno == ECONNRESET || errno == EPIPE))
+		{
+			fprintf(stderr, "Socket %d disconnected\n", socket);
+			close(socket);
+			free(wa);
+			pthread_exit(NULL);
+		}
+		else if (nbytes == -1)
+		{
+			perror("Unexpected error in send()");
+			free(wa);
+			pthread_exit(NULL);
+		}
+		sleep(5);
+	}
+    
+     */
+	pthread_exit(NULL);
 }
