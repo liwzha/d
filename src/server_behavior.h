@@ -27,7 +27,10 @@ char* con_rpl_welcome( user_info server, user_info usr );
 // send reply to client.  remove '\0' at the end of msg and append \r\n.
 void send_rpl( int clientSocket, char* msg );
 
-void recv_msg( int clientSocket, char *buf, int *buf_offset, char *msg, int *msg_offset );
+void recv_msg(int clientSocket, char *buf, int *buf_offset, char *msg, int *msg_offset );
+
+// design the response for a raw message
+void resp_to_cmd(user_info usr, char* msg,list_t user_list, char* serverHost);
 
 #endif
 

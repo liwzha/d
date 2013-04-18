@@ -11,9 +11,9 @@ user_info* find_by_nick( list_t *userlist, char * nick_query ){
     if( userlist == NULL )
         return NULL;
     for( i=0; i<list_size(userlist); i++ ){
-         p_user = (user_info *) list_get_at(userlist, i);
-         if( strcmp( p_user->ui_nick, nick_query )==0 )
-             return p_user;
+        p_user = (user_info *) list_get_at(userlist, i);
+        if( strcmp( p_user->ui_nick, nick_query )==0 )
+            return p_user;
     }
     return NULL;
 }
@@ -21,12 +21,12 @@ user_info* find_by_nick( list_t *userlist, char * nick_query ){
 char* con_rpl_welcome( user_info server, user_info usr ){
     char* rpl = malloc( sizeof(char)*MAX_MSG_LEN );
     sprintf(rpl,"%s %s %s :Welcome to the Internet Relay Network %s!%s@%s",
-      con_userinfo_str(server),
-      RPL_WELCOME,
-      usr.ui_nick,
-      usr.ui_nick,
-      usr.ui_username,
-      usr.ui_hostname); 
+            con_userinfo_str(server),
+            RPL_WELCOME,
+            usr.ui_nick,
+            usr.ui_nick,
+            usr.ui_username,
+            usr.ui_hostname);
     return rpl;
 }
 
@@ -49,8 +49,48 @@ void recv_msg( int clientSocket, char *buf, int *buf_offset, char *msg, int *msg
     } else
         numbytes = (*buf_offset);
     while(( flag=extract_message(buf,buf_offset,numbytes,msg,msg_offset))==-1 ){
-            if(( numbytes = recv( clientSocket, buf+(*buf_offset), MAX_MSG_LEN, 0 )) == -1 )
-                perror("recv");
+        if(( numbytes = recv( clientSocket, buf+(*buf_offset), MAX_MSG_LEN, 0 )) == -1 )
+            perror("recv");
     }
+    
+}
+
+void resp_to_cmd(user_info usr, char* msg,list_t user_list, char* serverHost){
+    cmd_message parsed_msg = parse_message(msg);//convert raw message to struct cmd_message
+    switch ( parsed_msg.c_m_command) {
+        case NICK:
+            add_user_by_nick(list_get_at( &parsed_msg.c_m_parameters, 0 ),
+                             usr,
+                             user_list,
+                             serverHost);
+            break;
+        case USER:
+            add_user_by_uname(list_get_at( &parsed_msg.c_m_parameters, 0 ),
+                              list_get_at( &parsed_msg.c_m_parameters, 3 ),
+                              usr,
+                              user_list,
+                              serverHost);
+            break;
+        case PRIVMSG:
+            if (is_user_registered(from_user) && is_user_registered(msg.To_user)){
+                char buffer [MAX_MSG_LEN];
+                snprintf ( buffer, sizeof(buffer),
+                          ":%s!%s@%s\nPRIVMSG %s :%s%",
+                          from_user.ui_nick,
+                          from_user.ui_username,
+                          from_user.ui_hostname,
+                          msg.To_user.nick,
+                          msg.To_user.Message );
+                send_rpl(msg.To_user, buffer )
+            }
+            else{
+                // TO DO:If user unregistered: show error
+            }
+            break;
+        default:
+            // TO DO: ERR_UNKNOWNCOMAND
+            break;
+    }
+}
 
 }
