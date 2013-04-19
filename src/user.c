@@ -82,21 +82,21 @@ bool isempty(user_info user){
 	else
 		return 0;
 }
-user_info init_user(){
+user_info * init_user(){
 	return create_user("","","","",-1);
 }
 
-user_info create_user( char *nick, char *username, char *fullname, char *hostname, int socket){
-    user_info user;
+user_info *create_user( char *nick, char *username, char *fullname, char *hostname, int socket){
+    user_info *user = (user_info*)malloc(sizeof(user_info));
     if( !( nick && username && fullname && hostname ) ){
         fprintf(stderr,"*error* create_user: augments cannot be NULL. (use empty string "" instead.)\n");
         exit(1);
     }
-    user.ui_nick = strdup(nick);
-    user.ui_username = strdup(username);
-    user.ui_fullname = strdup(fullname);
-    user.ui_hostname = strdup(hostname);
-    user.ui_socket   = socket;
+    user->ui_nick = strdup(nick);
+    user->ui_username = strdup(username);
+    user->ui_fullname = strdup(fullname);
+    user->ui_hostname = strdup(hostname);
+    user->ui_socket   = socket;
     return user;
 }
 
@@ -120,80 +120,66 @@ bool is_user_registered(user_info user){
         return 1;
 }
 
-void add_user_by_nick(char* nick,user_info* usr, list_t* user_list,char* serverhost){
-	if( list_size( user_list)==0){
-        list_init( user_list);    // initialize the list
-	}
-	else{
-		int clientSocket=usr->ui_socket;
-		if(is_nick_present(*user_list,nick)){
-			// Nick already present, send error
-  			char buffer [MAX_MSG_LEN];
- 			snprintf ( buffer, sizeof(buffer),
-                      ":%s %s * %s :Nickname is already in use",
-                      serverhost,
-                      ERR_NICKNAMEINUSE,
-                      nick);
-			send_rpl( clientSocket, buffer );
-			//printf("\nadd %d\n",1);
-		}
-		else {
-			user_info *check_usr=NULL;
-			check_usr=(user_info *) malloc(sizeof(user_info *));
-            list_find_socket(*user_list,clientSocket,&check_usr);// searches for socket
+void add_user_by_nick(char* nick, user_info *usr, char* serverhost){
+        int clientSocket=usr->ui_socket;
+        if(is_nick_present(nick)){// Nick already present, send error
+            char buffer [MAX_MSG_LEN];
+            snprintf ( buffer, sizeof(buffer),
+               ":%s %s * %s :Nickname is already in use",
+               serverhost,
+               ERR_NICKNAMEINUSE,
+               nick);
+            send_rpl( clientSocket, buffer );
+        }
+        else {
+            user_info *check_usr=NULL;
+            check_usr = list_find_socket(clientSocket);// searches for socket
 			//printf("\nadd %d\n",2);
 			//print(*check_usr);
 			//printf("\n:username:%s:\n",strlen((*check_usr).ui_username));
-			if (isempty(*check_usr)){
-				usr->ui_nick=nick;
-				list_append(user_list,usr);
-				//printf("\nadd %d\n",3);
-			}
-			else if(strlen((*check_usr).ui_username)!=0 && !is_user_registered(*usr)){
-				//welcome and add nick
-				(*check_usr).ui_nick=malloc(sizeof(char)*strlen(nick));
-				strcpy((*check_usr).ui_nick,nick);
-				list_append(user_list,&check_usr);
+            if (isempty(*check_usr)){
+                usr->ui_nick=nick;
+                list_append(&user_list,usr);
+            }
+            else if(strlen((*check_usr).ui_username)!=0 && !is_user_registered(*usr)){
+			//welcome and add nick
+                (*check_usr).ui_nick=malloc(sizeof(char)*strlen(nick));
+		strcpy((*check_usr).ui_nick,nick);
+		list_append(&user_list,&check_usr);
                 
-				char * buffer ;
-				buffer = con_rpl_welcome( serverhost, check_usr );
-				send_rpl( clientSocket, buffer );
+		char * buffer ;
+		buffer = con_rpl_welcome( serverhost, check_usr );
+		send_rpl( clientSocket, buffer );
 				//printf("\nadd %d\n",4);
-			}
-			else{
-				(*check_usr).ui_nick=malloc(sizeof(char)*strlen(nick));
-				strcpy((*check_usr).ui_nick,nick);
-				list_append(user_list,&check_usr);
+	     }
+	     else{
+	         (*check_usr).ui_nick=malloc(sizeof(char)*strlen(nick));
+		 strcpy((*check_usr).ui_nick,nick);
+		 list_append(&user_list,&check_usr);
 				//printf("\nadd %d\n",5);
-			}
-		}
+             }
 	}
 	//printlist(*user_list);
 }
 
-void add_user_by_uname(char* username,char* full_username,user_info* usr, list_t* user_list,char* serverhost){
-	if( list_size( user_list)==0){
-        list_init( user_list);    // initialize the list
-	}
-	else {
+void add_user_by_uname(char* username,char* full_username,user_info *usr,char* serverhost){
 		user_info *check_usr=NULL;
 		int clientSocket=usr->ui_socket;
-		check_usr=(user_info *) malloc(sizeof(user_info *));
-		list_find_socket(*user_list,clientSocket,&check_usr);// searches for socket
+		check_usr = list_find_socket(clientSocket);// searches for socket
 		//printf("\nadd %d\n",2);
 		//print(*check_usr);
 		if (isempty(*check_usr)){
 			usr->ui_username=username;
 			if(strlen(full_username)!=0)
 				usr->ui_fullname=full_username;
-			list_append(user_list,usr);
+			list_append(&user_list,usr);
 		}
 		else if(strlen((*check_usr).ui_nick)!=0 && !is_user_registered(*usr) ){
 			(*check_usr).ui_username=malloc(sizeof(char)*strlen(username));
 			strcpy((*check_usr).ui_username,username);
 			if(strlen(full_username)!=0)
 				check_usr->ui_fullname=full_username;
-			list_append(user_list,&check_usr);
+			list_append(&user_list,&check_usr);
 			//New username is added
 			char *buffer;
 			buffer = con_rpl_welcome( serverhost, *usr );
@@ -205,30 +191,30 @@ void add_user_by_uname(char* username,char* full_username,user_info* usr, list_t
 			strcpy((*check_usr).ui_username,username);
 			if(strlen(full_username)!=0)
 				usr->ui_fullname=full_username;
-			list_append(user_list,&check_usr);
+			list_append(&user_list,&check_usr);
 		}
-	}
 	//printlist(*user_list);
 }
 
-void list_find_socket(list_t user_list,int socket,user_info** p_usr){
-	user_info usr;
-	*p_usr=(user_info *) malloc(sizeof(user_list));
-	**p_usr=init_user();
+user_info* list_find_socket(int socket){
+	user_info *usr;
+        user_info* p_usr = init_user();
+	//*p_usr=(user_info *) malloc(sizeof(user_info));
 	int i;
 	for(i=0;i<list_size(&user_list);i++){
-		usr = *(user_info *)list_get_at( &user_list, i);
-		if(usr.ui_socket==socket){
+		usr = (user_info *)list_get_at( &user_list, i);
+		if(usr->ui_socket==socket){
 			
-			*p_usr=(user_info *)list_get_at( &user_list, i);
+			p_usr=usr;
 			//printf("Nikita");
 			//print(**p_usr);
 			break;
 		}
 	}
+        return p_usr;
 }
 
-bool is_nick_present(list_t user_list,char* nick){
+bool is_nick_present(char* nick){
 	bool value=0;
 	int i;
 	user_info usr;

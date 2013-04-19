@@ -20,7 +20,7 @@
 #include <errno.h>
 #include <string.h> /* memset */
 #include <unistd.h> /* close */
-#include <string.h>
+#include <signal.h>
 
 
 
@@ -49,7 +49,7 @@ void sigchld_handler(int s){
 }
 
 // user_list can be modified by any process;
-list_t user_list;
+//list_t user_list;
 
 int main(int argc, char *argv[])
 {
@@ -88,6 +88,7 @@ int main(int argc, char *argv[])
         exit(-1);
     }
     
+    list_init(&user_list);
     //Create Server Thread;
     
     if(pthread_create(&server_thread,NULL,accept_clients,NULL)<0)
@@ -236,7 +237,8 @@ void *service_single_client(void *args) {
         
         recv_msg(clientSocket,buf,&buf_offset,msg,&msg_offset );
         printf("msg:%s\n",msg);
-        resp_to_cmd(usr, msg,user_list, serverHost->h_name);
+        cmd_message parsed_msg = parse_message(msg);
+        resp_to_cmd(usr, parsed_msg,serverHost->h_name);
         
     }
     

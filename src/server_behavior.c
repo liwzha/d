@@ -55,37 +55,37 @@ void recv_msg( int clientSocket, char *buf, int *buf_offset, char *msg, int *msg
     
 }
 
-void resp_to_cmd(user_info usr, char* msg,list_t user_list, char* serverHost){
-    cmd_message parsed_msg = parse_message(msg);//convert raw message to struct cmd_message
+//void resp_to_cmd(user_info usr, char* msg,list_t user_list, char* serverHost){
+void resp_to_cmd(user_info usr, cmd_message parsed_msg, char* serverHost){
+//    cmd_message parsed_msg = parse_message(msg);//convert raw message to struct cmd_message
     switch ( parsed_msg.c_m_command) {
         case NICK:
-            add_user_by_nick(list_get_at( &parsed_msg.c_m_parameters, 0 ),
-                             usr,
-                             user_list,
+            add_user_by_nick((char*)list_get_at( &parsed_msg.c_m_parameters, 0 ),
+                             &usr,
                              serverHost);
             break;
         case USER:
-            add_user_by_uname(list_get_at( &parsed_msg.c_m_parameters, 0 ),
-                              list_get_at( &parsed_msg.c_m_parameters, 3 ),
-                              usr,
-                              user_list,
+            add_user_by_uname((char*)list_get_at( &parsed_msg.c_m_parameters, 0 ),
+                              (char*)list_get_at( &parsed_msg.c_m_parameters, 3 ),
+                              &usr,
                               serverHost);
             break;
         case PRIVMSG:
-            if (is_user_registered(from_user) && is_user_registered(msg.To_user)){
-                char buffer [MAX_MSG_LEN];
-                snprintf ( buffer, sizeof(buffer),
-                          ":%s!%s@%s\nPRIVMSG %s :%s%",
-                          from_user.ui_nick,
-                          from_user.ui_username,
-                          from_user.ui_hostname,
-                          msg.To_user.nick,
-                          msg.To_user.Message );
-                send_rpl(msg.To_user, buffer )
-            }
-            else{
-                // TO DO:If user unregistered: show error
-            }
+           // if (is_user_registered(usr) && is_user_registered(parsed_msg.To_user)){
+           //     char buffer [MAX_MSG_LEN];
+           //     snprintf ( buffer, sizeof(buffer),
+           //               ":%s!%s@%s\nPRIVMSG %s :%s%",
+           //               usr.ui_nick,
+           //               usr.ui_username,
+           //               usr.ui_hostname,
+           //              (char*)list_get_at( &parsed_msg.c_m_parameters, 0 ),  
+           //              (char*)list_get_at( &parsed_msg.c_m_parameters, 1 ),  
+           //               );
+           //     send_rpl(parsed_msg.To_user, buffer )
+           // }
+           // else{
+           //     // TO DO:If user unregistered: show error
+           // }
             break;
         default:
             // TO DO: ERR_UNKNOWNCOMAND
@@ -93,4 +93,4 @@ void resp_to_cmd(user_info usr, char* msg,list_t user_list, char* serverHost){
     }
 }
 
-}
+
