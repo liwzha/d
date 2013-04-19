@@ -155,7 +155,7 @@ void add_user_by_nick(char* nick,user_info* usr, list_t* user_list,char* serverh
 				strcpy((*check_usr).ui_nick,nick);
 				list_append(user_list,&check_usr);
                 
-				char buffer [MAX_MSG_LEN];
+				char * buffer ;
 				buffer = con_rpl_welcome( serverhost, check_usr );
 				send_rpl( clientSocket, buffer );
 				//printf("\nadd %d\n",4);
@@ -195,7 +195,7 @@ void add_user_by_uname(char* username,char* full_username,user_info* usr, list_t
 				check_usr->ui_fullname=full_username;
 			list_append(user_list,&check_usr);
 			//New username is added
-			char buffer [MAX_MSG_LEN];
+			char *buffer;
 			buffer = con_rpl_welcome( serverhost, *usr );
 			strcpy(buffer,"Welcome");
             send_rpl( clientSocket, buffer );
