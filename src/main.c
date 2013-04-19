@@ -278,7 +278,7 @@ void *service_single_client(void *args) {
 #endif
         
         
-        resp_to_cmd(*usr, parsed_msg,serverHost->h_name);
+        resp_to_cmd(usr, parsed_msg,serverHost->h_name);
         
 #ifdef MUTEX
         pthread_mutex_unlock(&lock);
