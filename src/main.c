@@ -143,7 +143,7 @@ void *accept_clients()
     
     char hostNameServer[512];
     
-    user_info server;
+    user_info* server;
         
     list_init(&user_list);// list of user_info *
     
@@ -225,7 +225,7 @@ void *service_single_client(void *args) {
     buf = (char*)malloc(sizeof(char)*MAX_MSG_LEN);
     msg = (char*)malloc(sizeof(char)*MAX_MSG_LEN);
     list_t param_list;
-    user_info usr;
+    user_info *usr;
 	int socket, nbytes;
 	char tosend[100];
     
@@ -264,7 +264,7 @@ void *service_single_client(void *args) {
         #endif
         
         
-        resp_to_cmd(usr, parsed_msg,serverHost->h_name);
+        resp_to_cmd(*usr, parsed_msg,serverHost->h_name);
         
         #ifdef MUTEX
         pthread_mutex_unlock(&lock);
