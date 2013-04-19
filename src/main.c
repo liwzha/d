@@ -39,7 +39,12 @@ struct workerArgs
     int socket;
     struct hostent *clientHost;
     struct hostent *serverHost;
+    
+};
 
+struct serverThreadArgs
+{
+    char* port;
 };
 
 void *service_single_client(void *args);
@@ -64,33 +69,33 @@ int main(int argc, char *argv[])
     pthread_t server_thread;
     sigset_t new;
     
-	/*while ((opt = getopt(argc, argv, "p:o:h")) != -1)
-     switch (opt)
-     {
-     case 'p':
-     port = strdup(optarg);
-     break;
-     case 'o':
-     passwd = strdup(optarg);
-     break;
-     default:
-     printf("ERROR: Unknown option -%c\n", opt);
-     exit(-1);
-     }
-     
-     if (!passwd)
-     {
-     fprintf(stderr, "ERROR: You must specify an operator password\n");
-     exit(-1);
-     }
-     */
+	while ((opt = getopt(argc, argv, "p:o:h")) != -1)
+        switch (opt)
+    {
+        case 'p':
+            port = strdup(optarg);
+            break;
+        case 'o':
+            passwd = strdup(optarg);
+            break;
+        default:
+            printf("ERROR: Unknown option -%c\n", opt);
+            exit(-1);
+    }
+    
+    if (!passwd)
+    {
+        fprintf(stderr, "ERROR: You must specify an operator password\n");
+        exit(-1);
+    }
+    
     
     sigemptyset(&new);
     sigaddset(&new, SIGPIPE);
     
-    #ifdef MUTEX
+#ifdef MUTEX
 	pthread_mutex_init(&lock, NULL);
-    #endif
+#endif
     
     
     if(pthread_sigmask(SIG_BLOCK,&new,NULL)!=0)
@@ -104,7 +109,14 @@ int main(int argc, char *argv[])
     list_init(&user_list);
     //Create Server Thread;
     
-    if(pthread_create(&server_thread,NULL,accept_clients,NULL)<0)
+    struct serverThreadArgs *serverArgs;
+    
+    serverArgs= malloc(sizeof(struct serverThreadArgs));
+    
+    serverArgs -> port = port;
+    
+    
+    if(pthread_create(&server_thread,NULL,accept_clients,serverArgs)<0)
     {
         perror("could not create server thread");
         exit(-1);
@@ -113,45 +125,47 @@ int main(int argc, char *argv[])
     
     
     
-    #ifdef MUTEX
+#ifdef MUTEX
 	pthread_mutex_destroy(&lock);
-    #endif
-
+#endif
+    
     pthread_exit(NULL);
     
     return 0;
 }
 
-void *accept_clients()
+void *accept_clients(void *args)
 {
+    struct serverThreadArgs *serverArgs = (struct serverThreadArgs*)args;
+    char *serverport = serverArgs->port;
     int serverSocket;
-//    struct addrinfo hints, *servinfo, *p;
+    //    struct addrinfo hints, *servinfo, *p;
     
-
+    
     
     struct sockaddr_in serverAddr;
-
+    
     
     //struct sockaddr_storage clientAddr; // connector's address information
     
     socklen_t sinSize;
     struct sigaction sa;
     struct hostent *serverHost;
-
+    
     
     int yes=1;
     
     char hostNameServer[512];
     
     user_info* server;
-        
+    
     list_init(&user_list);// list of user_info *
     
     
-   
+    
     memset(&serverAddr, 0, sizeof(serverAddr));
     serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(7776);
+    serverAddr.sin_port = htons(serverport);
     serverAddr.sin_addr.s_addr = INADDR_ANY;
     
     serverSocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -161,9 +175,9 @@ void *accept_clients()
     bind(serverSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr));
     listen(serverSocket, BACKLOG);
     
-
     
-
+    
+    
     
     
     printf("server: waiting for connections...\n");
@@ -182,17 +196,17 @@ void *accept_clients()
         if (clientSocket == -1) {
             perror("accept");
             continue;
-        
+            
         }
         
         pthread_t worker_thread;
         struct workerArgs *wa;
-
+        
         struct hostent *clientHost;
         gethostname(hostNameServer,sizeof(hostNameServer));
         serverHost = gethostbyname(hostNameServer);
         clientHost = gethostbyaddr((char *)&clientAddr.sin_addr.s_addr, sizeof(clientAddr.sin_addr.s_addr), AF_INET);
-                
+        
         //Connection Build: Then spawn a new thread;
         
         wa = malloc(sizeof(struct workerArgs));
@@ -250,8 +264,8 @@ void *service_single_client(void *args) {
     usr=create_user("","","",clientHost->h_name,clientSocket);
     /* add the user toe the userlist, accquire a lock here
      */
-
-
+    
+    
     /* *** expect for user's connection *** */
     while(1){
         
@@ -259,44 +273,44 @@ void *service_single_client(void *args) {
         printf("msg:%s\n",msg);
         cmd_message parsed_msg = parse_message(msg);
         
-        #ifdef MUTEX
+#ifdef MUTEX
         pthread_mutex_lock(&lock);
-        #endif
+#endif
         
         
         resp_to_cmd(*usr, parsed_msg,serverHost->h_name);
         
-        #ifdef MUTEX
+#ifdef MUTEX
         pthread_mutex_unlock(&lock);
-        #endif
-
-         
+#endif
+        
+        
         
     }
     
     /*
-	while(1)
-	{
-		sprintf(tosend,"%d -- Hello, socket!\n", time(NULL));
-        
-		nbytes = send(socket, tosend, strlen(tosend), 0);
-        
-		if (nbytes == -1 && (errno == ECONNRESET || errno == EPIPE))
-		{
-			fprintf(stderr, "Socket %d disconnected\n", socket);
-			close(socket);
-			free(wa);
-			pthread_exit(NULL);
-		}
-		else if (nbytes == -1)
-		{
-			perror("Unexpected error in send()");
-			free(wa);
-			pthread_exit(NULL);
-		}
-		sleep(5);
-	}
-    
+     while(1)
+     {
+     sprintf(tosend,"%d -- Hello, socket!\n", time(NULL));
+     
+     nbytes = send(socket, tosend, strlen(tosend), 0);
+     
+     if (nbytes == -1 && (errno == ECONNRESET || errno == EPIPE))
+     {
+     fprintf(stderr, "Socket %d disconnected\n", socket);
+     close(socket);
+     free(wa);
+     pthread_exit(NULL);
+     }
+     else if (nbytes == -1)
+     {
+     perror("Unexpected error in send()");
+     free(wa);
+     pthread_exit(NULL);
+     }
+     sleep(5);
+     }
+     
      */
 	pthread_exit(NULL);
 }
