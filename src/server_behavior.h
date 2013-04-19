@@ -31,7 +31,7 @@ void recv_msg(int clientSocket, char *buf, int *buf_offset, char *msg, int *msg_
 
 // design the response for a raw message
 //void resp_to_cmd(user_info usr, char* msg,list_t user_list, char* serverHost);
-void resp_to_cmd(user_info usr, cmd_message msg, char* serverHost);
+void resp_to_cmd(user_info *usr, cmd_message msg, char* serverHost);
 
 #endif
 
