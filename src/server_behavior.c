@@ -56,18 +56,18 @@ void recv_msg( int clientSocket, char *buf, int *buf_offset, char *msg, int *msg
 }
 
 //void resp_to_cmd(user_info usr, char* msg,list_t user_list, char* serverHost){
-void resp_to_cmd(user_info usr, cmd_message parsed_msg, char* serverHost){
+void resp_to_cmd(user_info *usr, cmd_message parsed_msg, char* serverHost){
 //    cmd_message parsed_msg = parse_message(msg);//convert raw message to struct cmd_message
     switch ( parsed_msg.c_m_command) {
         case NICK:
             add_user_by_nick((char*)list_get_at( &parsed_msg.c_m_parameters, 0 ),
-                             &usr,
+                             usr,
                              serverHost);
             break;
         case USER:
             add_user_by_uname((char*)list_get_at( &parsed_msg.c_m_parameters, 0 ),
                               (char*)list_get_at( &parsed_msg.c_m_parameters, 3 ),
-                              &usr,
+                              usr,
                               serverHost);
             break;
         case PRIVMSG:
