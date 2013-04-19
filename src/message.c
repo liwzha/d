@@ -38,6 +38,7 @@ int extract_message(char *buf, int* buf_offset, int len, char *msg, int*msg_offs
     return flag;
 }
 
+// helper function for parse_message
 // extract the first substring before a space
 // delete the substring from msg
 void parse_message_helper(char *msg, list_t *param_list, int is_front){
@@ -58,26 +59,44 @@ void parse_message_helper(char *msg, list_t *param_list, int is_front){
     if( substring != NULL )
         parse_message_helper( substring+1, param_list, 0 ); 
 }
-enum cmd_name parse_message(char *msg, char **prefix, list_t *param_list){
-printf("parse_message in msg=%s\n",msg);
-    list_init(param_list);
-    char * substring, *cmd=NULL, *tmp;
+
+
+cmd_message parse_message(char *msg){
+    char *cmd = NULL;
+    cmd_message cm;
     if( strlen(msg) == 0 ){
         fprintf(stderr,"parse_message: msg has length zero!!!\n");
         exit(0);
     } 
-    parse_message_helper(msg,param_list,1);
-    tmp = (char *)list_get_at( param_list,0 );
-    if( tmp[0]==':' ){
-        *prefix = strdup( tmp );
-        list_delete_range( param_list,0,0 );
-    }
-    else
-        *prefix = strdup("");
-    cmd = (char *)list_get_at( param_list,0 );
-    list_delete_range( param_list,0,0 );
-    return str2cmd( cmd ); 
+    list_init(& cm.c_m_parameters);
+    parse_message_helper(msg, &cm.c_m_parameters,1);
+    cmd = (char *)list_get_at( &cm.c_m_parameters,0 );
+    list_delete_range( &cm.c_m_parameters,0,0 );
+    cm.c_m_command = str2cmd( cmd );
+    return cm; 
 }
+
+// commenting out the old parse_message function
+//enum cmd_name parse_message(char *msg, char **prefix, list_t *param_list){
+//printf("parse_message in msg=%s\n",msg);
+//    list_init(param_list);
+//    char * substring, *cmd=NULL, *tmp;
+//    if( strlen(msg) == 0 ){
+//        fprintf(stderr,"parse_message: msg has length zero!!!\n");
+//        exit(0);
+//    } 
+//    parse_message_helper(msg,param_list,1);
+//    tmp = (char *)list_get_at( param_list,0 );
+//    if( tmp[0]==':' ){
+//        *prefix = strdup( tmp );
+//        list_delete_range( param_list,0,0 );
+//    }
+//    else
+//        *prefix = strdup("");
+//    cmd = (char *)list_get_at( param_list,0 );
+//    list_delete_range( param_list,0,0 );
+//    return str2cmd( cmd ); 
+//}
 
 enum cmd_name str2cmd( char *str ){
     if( strcmp( str, "NICK" ) == 0 )
