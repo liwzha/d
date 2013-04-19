@@ -48,6 +48,11 @@ void sigchld_handler(int s){
     while(waitpid(-1,NULL,WNOHANG) > 0 );
 }
 
+#ifdef MUTEX
+pthread_mutex_t lock;
+#endif
+
+
 // user_list can be modified by any process;
 //list_t user_list;
 
@@ -82,11 +87,19 @@ int main(int argc, char *argv[])
     
     sigemptyset(&new);
     sigaddset(&new, SIGPIPE);
+    
+    #ifdef MUTEX
+	pthread_mutex_init(&lock, NULL);
+    #endif
+    
+    
     if(pthread_sigmask(SIG_BLOCK,&new,NULL)!=0)
     {
         perror("Unable to mask SIGPIPE");
         exit(-1);
     }
+    
+    
     
     list_init(&user_list);
     //Create Server Thread;
@@ -97,6 +110,13 @@ int main(int argc, char *argv[])
         exit(-1);
     }
     pthread_join(server_thread,NULL);
+    
+    
+    
+    #ifdef MUTEX
+	pthread_mutex_destroy(&lock);
+    #endif
+
     pthread_exit(NULL);
     
     return 0;
@@ -238,7 +258,19 @@ void *service_single_client(void *args) {
         recv_msg(clientSocket,buf,&buf_offset,msg,&msg_offset );
         printf("msg:%s\n",msg);
         cmd_message parsed_msg = parse_message(msg);
+        
+        #ifdef MUTEX
+        pthread_mutex_lock(&lock);
+        #endif
+        
+        
         resp_to_cmd(usr, parsed_msg,serverHost->h_name);
+        
+        #ifdef MUTEX
+        pthread_mutex_unlock(&lock);
+        #endif
+
+         
         
     }
     
