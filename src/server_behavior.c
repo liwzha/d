@@ -18,10 +18,10 @@ user_info* find_by_nick( list_t *userlist, char * nick_query ){
     return NULL;
 }
 
-char* con_rpl_welcome( user_info *server, user_info *usr ){
+char* con_rpl_welcome( char *server, user_info *usr ){
     char* rpl = malloc( sizeof(char)*MAX_MSG_LEN );
     sprintf(rpl,"%s %s %s :Welcome to the Internet Relay Network %s!%s@%s",
-            con_userinfo_str(server),
+            server,
             RPL_WELCOME,
             usr->ui_nick,
             usr->ui_nick,
@@ -166,7 +166,7 @@ void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHo
 	else if (is_user_registered(usr) && is_user_registered(receiver)){
            char buffer [MAX_MSG_LEN];
            snprintf ( buffer, sizeof(buffer),
-                    ":%s!%s@%s\nPRIVMSG %s :%s%",
+                    ":%s!%s@%s\nPRIVMSG %s :%s",
                      usr->ui_nick,
                      usr->ui_username,
                      usr->ui_hostname,

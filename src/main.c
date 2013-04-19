@@ -165,7 +165,7 @@ void *accept_clients(void *args)
     
     memset(&serverAddr, 0, sizeof(serverAddr));
     serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(serverport);
+    serverAddr.sin_port = htons(atoi(serverport));
     serverAddr.sin_addr.s_addr = INADDR_ANY;
     
     serverSocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);

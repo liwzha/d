@@ -22,7 +22,7 @@ void close_clientSocket( int clientSocket );
 user_info* find_by_nick( list_t *userlist, char * nick_query );
 
 // construct welcome info
-char* con_rpl_welcome( user_info *server, user_info *usr );
+char* con_rpl_welcome( char *server, user_info *usr );
 
 // send reply to client.  remove '\0' at the end of msg and append \r\n.
 void send_rpl( int clientSocket, char* msg );
