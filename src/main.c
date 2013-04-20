@@ -281,13 +281,13 @@ printf("inside service_single_client\n");
         resp_to_cmd(usr, parsed_msg,serverHost->h_name);
         
         pthread_mutex_unlock(&lock);
-printf("debug: press q to continue...\n");
+/*printf("debug: press q to continue...\n");
 char s[20];
 while(1){
 scanf("%s",&s);
 if( s[0] == 'q' )
   break;
-}
+}*/
     }
     
     /*
