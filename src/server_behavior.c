@@ -43,12 +43,14 @@ void send_rpl( int clientSocket, char* msg ){
 
 void recv_msg( int clientSocket, char *buf, int *buf_offset, char *msg, int *msg_offset ){
     int numbytes,flag;
+printf("inside recv_msg, buf_offset = %d, msg_offset = %d\n",*buf_offset, *msg_offset);
     if( (*buf_offset)==0 ){
         if(( numbytes = recv( clientSocket, buf, MAX_MSG_LEN, 0 )) == -1 )
             perror("recv");
     } else
         numbytes = (*buf_offset);
     while(( flag=extract_message(buf,buf_offset,numbytes,msg,msg_offset))==-1 ){
+printf("recv_msg:  incomplete msg, waiting for rest of the msg from usr...\n");
         if(( numbytes = recv( clientSocket, buf+(*buf_offset), MAX_MSG_LEN, 0 )) == -1 )
             perror("recv");
     }

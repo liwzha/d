@@ -4,6 +4,12 @@
 // return 1: if contains more than one complete msg
 // return -1: if msg incomplete
 int extract_message(char *buf, int* buf_offset, int len, char *msg, int*msg_offset){
+printf("inside extract message...processing raw msg (len = %d):\n",len);
+int t;
+for( t=0;t<len;t++ )
+    printf("%c",buf[t]);
+printf("\n");
+
     int i,j,flag,reader=0;
     len += (*buf_offset); 
     if( len<=0 )

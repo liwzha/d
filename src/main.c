@@ -39,6 +39,7 @@ struct workerArgs
     int socket;
     struct hostent *clientHost;
     struct hostent *serverHost;
+    int setup_done;
     
 };
 
@@ -53,9 +54,8 @@ void sigchld_handler(int s){
     while(waitpid(-1,NULL,WNOHANG) > 0 );
 }
 
-#ifdef MUTEX
 pthread_mutex_t lock;
-#endif
+pthread_cond_t cv_setup_done;
 
 
 // user_list can be modified by any process;
@@ -93,10 +93,8 @@ int main(int argc, char *argv[])
     sigemptyset(&new);
     sigaddset(&new, SIGPIPE);
     
-#ifdef MUTEX
-	pthread_mutex_init(&lock, NULL);
-#endif
-    
+    pthread_mutex_init(&lock, NULL);
+    pthread_cond_init(&cv_setup_done, NULL);
     
     if(pthread_sigmask(SIG_BLOCK,&new,NULL)!=0)
     {
@@ -112,7 +110,6 @@ int main(int argc, char *argv[])
     struct serverThreadArgs *serverArgs;
     
     serverArgs= malloc(sizeof(struct serverThreadArgs));
-    
     serverArgs -> port = port;
     
     
@@ -121,13 +118,11 @@ int main(int argc, char *argv[])
         perror("could not create server thread");
         exit(-1);
     }
+
     pthread_join(server_thread,NULL);
     
-    
-    
-#ifdef MUTEX
-	pthread_mutex_destroy(&lock);
-#endif
+    pthread_mutex_destroy(&lock);
+    pthread_cond_destroy(&cv_setup_done);
     
     pthread_exit(NULL);
     
@@ -175,11 +170,6 @@ void *accept_clients(void *args)
     bind(serverSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr));
     listen(serverSocket, BACKLOG);
     
-    
-    
-    
-    
-    
     printf("server: waiting for connections...\n");
     /* ****** main accept() loop ****** */
     while(1) {
@@ -214,24 +204,31 @@ void *accept_clients(void *args)
         wa->clientHost = clientHost;
         wa->serverHost = serverHost;
         
+        pthread_mutex_lock(&lock);
         if(pthread_create(&worker_thread,NULL,service_single_client,wa)!=0)
         {
             perror("Could not create a worker thread;");
+            pthread_exit(NULL);
             
         }
-        
-        if (!fork()) { // this is the child process??Not sure about the function of fork??
-            close(serverSocket);
+         
+        while(!wa->setup_done)
+            pthread_cond_wait(&cv_setup_done, &lock);
+ 
+        pthread_mutex_unlock(&lock);
+       // if (!fork()) { // this is the child process??Not sure about the function of fork??
+       //     close(serverSocket);
             
-        }
-        close(clientSocket);
+       // }
     }
-    
-	return 0;
+    pthread_exit(NULL);    
+
+    return 0;
 }
 
 
 void *service_single_client(void *args) {
+printf("inside service_single_client\n");
     
     int rv, numbytes, buf_offset=0, msg_offset=-1,flag;
     enum cmd_name cmd;
@@ -259,7 +256,10 @@ void *service_single_client(void *args) {
     pthread_detach(pthread_self());
     
 	fprintf(stderr, "Socket %d connected\n", clientSocket);
-    
+    wa->setup_done = 1;
+    pthread_mutex_lock(&lock);
+    pthread_cond_signal(&cv_setup_done);
+    pthread_mutex_unlock(&lock); 
     
     usr=create_user("","","",clientHost->h_name,clientSocket);
     /* add the user toe the userlist, accquire a lock here
@@ -268,24 +268,25 @@ void *service_single_client(void *args) {
     
     /* *** expect for user's connection *** */
     while(1){
-        
+       printf("main recv loop....\n"); 
+        pthread_mutex_lock(&lock);
+        printf("about to call recv_msg\n");
         recv_msg(clientSocket,buf,&buf_offset,msg,&msg_offset );
+        printf("returned from recv_msg\n");
         printf("msg:%s\n",msg);
         cmd_message parsed_msg = parse_message(msg);
-        
-#ifdef MUTEX
-        pthread_mutex_lock(&lock);
-#endif
         
         
         resp_to_cmd(usr, parsed_msg,serverHost->h_name);
         
-#ifdef MUTEX
         pthread_mutex_unlock(&lock);
-#endif
-        
-        
-        
+printf("debug: press q to continue...\n");
+char s[20];
+while(1){
+scanf("%s",&s);
+if( s[0] == 'q' )
+  break;
+}
     }
     
     /*
@@ -312,5 +313,6 @@ void *service_single_client(void *args) {
      }
      
      */
-	pthread_exit(NULL);
+    close(socket);
+    pthread_exit(NULL);
 }
