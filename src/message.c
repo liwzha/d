@@ -105,10 +105,18 @@ cmd_message parse_message(char *msg){
 //}
 
 enum cmd_name str2cmd( char *str ){
-    if( strcmp( str, "NICK" ) == 0 )
+    if (     strcmp( str,"NICK"   ) == 0 )
         return NICK;
-    else if( strcmp( str, "USER" ) == 0 )
+    else if( strcmp( str,"USER"   ) == 0)
         return USER;
+    else if( strcmp( str,"PRIVMSG") == 0)
+	return PRIVMSG;
+    else if( strcmp( str,"NOTICE" ) == 0)
+	return NOTICE;
+    else if( strcmp( str,"PING" ) == 0)
+	return PING;
+    else if( strcmp( str,"PONG" ) == 0)
+	return PONG;
     else{
         fprintf(stderr,"cannot recognize command %s\n",str);
         return -1;// if command does not exist
