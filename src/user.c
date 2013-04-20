@@ -34,15 +34,38 @@ void print(user_info* usr){
 	}
 	printf("\n________________________\n");
 }*/
+
+user_info * init_user(){
+	return create_user("","","","",-1);
+}
 bool isempty(user_info *user){
 	if(user->ui_socket<=0)//doesnt handle null
 		return 1;
 	else
 		return 0;
 }
-user_info * init_user(){
-	return create_user("","","","",-1);
+bool is_user_registered(user_info* user){
+    if(isempty(user))
+	return 0;
+    else if(strlen(user->ui_nick)==0 || strlen(user->ui_username)==0)
+        return 0;
+    else
+        return 1;
 }
+bool is_nick_present(char* nick){
+	bool value=0;
+	int i;
+	user_info usr;
+	for(i=0;i<list_size(&user_list);i++){
+		usr = *(user_info *)list_get_at( &user_list, i);
+		if(strcmp(usr.ui_nick,nick)==0){
+			value=1;
+			return 1;
+		}		
+	}
+	return value;
+}
+
 
 user_info *create_user( char *nick, char *username, char *fullname, char *hostname, int socket){
     user_info *user = (user_info*)malloc(sizeof(user_info));
@@ -71,12 +94,7 @@ char *con_userinfo_str( user_info* user ){
     return info_str;
 }
 
-bool is_user_registered(user_info* user){
-    if(strlen(user->ui_nick)==0 || strlen(user->ui_username)==0)
-        return 0;
-    else
-        return 1;
-}
+
 user_info* list_find_socket(int socket){
 	user_info *usr;
         user_info* p_usr = init_user();
@@ -94,20 +112,6 @@ user_info* list_find_socket(int socket){
 	}
         return p_usr;
 }
-
-bool is_nick_present(char* nick){
-	bool value=0;
-	int i;
-	user_info usr;
-	for(i=0;i<list_size(&user_list);i++){
-		usr = *(user_info *)list_get_at( &user_list, i);
-		if(strcmp(usr.ui_nick,nick)==0){
-			value=1;
-			return 1;
-		}		
-	}
-	return value;
-}
 user_info* list_find_nick(char *nick){
 	user_info *usr;
         user_info* p_usr = init_user();
@@ -124,3 +128,4 @@ user_info* list_find_nick(char *nick){
 	}
         return p_usr;
 }
+

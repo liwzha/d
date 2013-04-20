@@ -34,10 +34,10 @@ void send_rpl( int clientSocket, char* msg ){
     int slen;
     char *msg_to_send;
     slen = strlen(msg);
-    msg_to_send = malloc(sizeof(char)*slen+1);
+    msg_to_send = malloc(sizeof(char)*slen+2);
     strcat( msg_to_send, msg );
-    msg_to_send[slen-1] = '\r';
-    msg_to_send[slen] = '\n';
+    msg_to_send[slen] = '\r';
+    msg_to_send[slen+1] = '\n';
     send(clientSocket, msg_to_send, slen+1, 0);
 }
 
@@ -90,7 +90,7 @@ void add_user_by_nick(char* nick, user_info *usr, char* serverhost){
                serverhost,
                ERR_NICKNAMEINUSE,
                nick);
-            send_rpl( clientSocket, buffer );
+           // send_rpl( clientSocket, buffer );
         }
         else {
             user_info *check_usr=NULL;
@@ -110,7 +110,7 @@ void add_user_by_nick(char* nick, user_info *usr, char* serverhost){
                 
 		char * buffer ;
 		buffer = con_rpl_welcome( serverhost, check_usr );
-		send_rpl( clientSocket, buffer );
+		//send_rpl( clientSocket, buffer );
 				//printf("\nadd %d\n",4);
 	     }
 	     else{
@@ -128,7 +128,7 @@ void add_user_by_uname(char* username,char* full_username,user_info *usr,char* s
 		int clientSocket=usr->ui_socket;
 		check_usr = list_find_socket(clientSocket);// searches for socket
 		//printf("\nadd %d\n",2);
-		//print(*check_usr);
+		printf("Add user by username: Client socket=%d\n",clientSocket);
 		if (isempty(check_usr)){
 			usr->ui_username=username;
 			if(strlen(full_username)!=0)
@@ -144,8 +144,7 @@ void add_user_by_uname(char* username,char* full_username,user_info *usr,char* s
 			//New username is added
 			char *buffer;
 			buffer = con_rpl_welcome( serverhost, usr );
-			strcpy(buffer,"Welcome");
-            send_rpl( clientSocket, buffer );
+            		//send_rpl( clientSocket, buffer );
 		}
 		else{
 			(*check_usr).ui_username=malloc(sizeof(char)*strlen(username));
@@ -159,26 +158,26 @@ void add_user_by_uname(char* username,char* full_username,user_info *usr,char* s
 
 void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHost){
 	user_info *receiver=NULL;
-	receiver=list_find_nick((char*)list_get_at( &parsed_msg.c_m_parameters, 0 ));
+	
+	printf("Inside send private message: NICK %s\n",(char *)list_get_at( &parsed_msg.c_m_parameters, 0));
+	receiver=list_find_nick(list_get_at( &parsed_msg.c_m_parameters, 0 ));
 
-	if(isempty(receiver)){
+	if(isempty(receiver)|| !is_user_registered(usr) || !is_user_registered(receiver)){
 		//TO DO ERROR NO NICK
-		printf("no nick");
+		printf("no nick\n");
 	}	
-	else if (is_user_registered(usr) && is_user_registered(receiver)){
+	else {
+	   printf("Nick found\n");
            char buffer [MAX_MSG_LEN];
            snprintf ( buffer, sizeof(buffer),
-                    ":%s!%s@%s\nPRIVMSG %s :%s",
+                    ":%s!%s@%s PRIVMSG %s %s",
                      usr->ui_nick,
                      usr->ui_username,
                      usr->ui_hostname,
                      (char*)list_get_at( &parsed_msg.c_m_parameters, 0 ),  
                      (char*)list_get_at( &parsed_msg.c_m_parameters, 1 ));
+	   printf("Message to be sent:\n%s\n to socket %d\n",buffer,receiver->ui_socket);
            send_rpl(receiver->ui_socket, buffer );
-        }
-        else{
-              // TO DO:If user unregistered: show error
-		printf("User Unregistered");
         }
 }
 
