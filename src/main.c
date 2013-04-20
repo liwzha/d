@@ -275,6 +275,7 @@ printf("inside service_single_client\n");
         printf("returned from recv_msg\n");
         printf("msg:%s\n",msg);
         cmd_message parsed_msg = parse_message(msg);
+        printf("returned from parse_message, about to call resp_to_cmd\n");
         
         
         resp_to_cmd(usr, parsed_msg,serverHost->h_name);

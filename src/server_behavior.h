@@ -27,14 +27,28 @@ char* con_rpl_welcome( char *server, user_info *usr );
 // send reply to client.  remove '\0' at the end of msg and append \r\n.
 void send_rpl( int clientSocket, char* msg );
 
+// reveive message from client
 void recv_msg(int clientSocket, char *buf, int *buf_offset, char *msg, int *msg_offset );
 
 // design the response for a raw message
-//void resp_to_cmd(user_info usr, char* msg,list_t user_list, char* serverHost);
 void resp_to_cmd(user_info *usr, cmd_message msg, char* serverHost);
 
-void add_user_by_nick(char* nick,user_info *usr,char* serverhost);//add user while checking if nick is already present
-void add_user_by_uname(char* username,char* full_username,user_info *usr, char* serverhost);// add by username
-void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHost);
+// add user while checking if nick is already present
+void add_user_by_nick(char* nick,user_info *usr,char* serverhost);
+
+// add by username
+void add_user_by_uname(char* username,char* full_username,user_info *usr, char* serverhost);
+
+// send private message in commands PRIVMSG and NOTICE
+void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHost,enum cmd_name command);
+
+// send PONG in response to PING
+void send_pong(user_info *usr, char* serverHost);
+
+// send reply to whois command.  report error if nick does not exist.
+void rpl_whois(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost);
+
+// send err_unknowncommand if the command can't be recognized
+void rpl_unknowcommand(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost);
 #endif
 

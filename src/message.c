@@ -20,11 +20,7 @@ printf("\n");
     for( ; (*msg_offset)<1; )
         msg[++(*msg_offset)] = buf[reader++];
 
-   /* if( (*msg_offset) == -1 ){
-        msg[++(*msg_offset)] = buf[reader++];
-    }*/
     for( ; reader < len && !(msg[(*msg_offset)-1] == '\r' && msg[*msg_offset] == '\n'); reader++){
-
         msg[++(*msg_offset)] = buf[reader];
     }
 
@@ -82,37 +78,17 @@ cmd_message parse_message(char *msg){
     list_init(& cm.c_m_parameters);
     parse_message_helper(msg, &cm.c_m_parameters,1);
     cmd = (char *)list_get_at( &cm.c_m_parameters,0 );
-    list_delete_range( &cm.c_m_parameters,0,0 );
+
     cm.c_m_command = str2cmd( cmd );
+    if( cm.c_m_command != UNKNOWNCOMMAND )
+        list_delete_range( &cm.c_m_parameters,0,0 );
     return cm; 
 }
 
-// commenting out the old parse_message function
-//enum cmd_name parse_message(char *msg, char **prefix, list_t *param_list){
-//printf("parse_message in msg=%s\n",msg);
-//    list_init(param_list);
-//    char * substring, *cmd=NULL, *tmp;
-//    if( strlen(msg) == 0 ){
-//        fprintf(stderr,"parse_message: msg has length zero!!!\n");
-//        exit(0);
-//    } 
-//    parse_message_helper(msg,param_list,1);
-//    tmp = (char *)list_get_at( param_list,0 );
-//    if( tmp[0]==':' ){
-//        *prefix = strdup( tmp );
-//        list_delete_range( param_list,0,0 );
-//    }
-//    else
-//        *prefix = strdup("");
-//    cmd = (char *)list_get_at( param_list,0 );
-//    list_delete_range( param_list,0,0 );
-//    return str2cmd( cmd ); 
-//}
-
 enum cmd_name str2cmd( char *str ){
-    if( strcmp( str, "NICK" ) == 0 )
+    if (     strcmp( str,"NICK"   ) == 0 )
         return NICK;
-    else if( strcmp( str, "USER" ) == 0 )
+    else if( strcmp( str,"USER"   ) == 0)
         return USER;
     else if( strcmp( str, "PRIVMSG" ) == 0 )
         return PRIVMSG;
