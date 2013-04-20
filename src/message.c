@@ -1,23 +1,28 @@
 #include "message.h"
 
+// *msg_offset -- index of last valid charactor stored in msg
+// *buf_offset -- index of first newly received char stored in buf 
+// len -- length of newly received message
 // return 0: if exact one complete msg
 // return 1: if contains more than one complete msg
 // return -1: if msg incomplete
 int extract_message(char *buf, int* buf_offset, int len, char *msg, int*msg_offset){
-printf("inside extract message...processing raw msg (len = %d):\n",len);
+printf("inside extract message...processing raw msg (len = %d, buf_offset = %d):\n",len,*buf_offset);
 int t;
 for( t=0;t<len;t++ )
     printf("%c",buf[t]);
 printf("\n");
 
     int i,j,flag,reader=0;
-    len += (*buf_offset); 
+    len += (*buf_offset);// now, len should be equal to the length of total elements in buf 
     if( len<=0 )
         fprintf(stderr,"extract_message: raw message has length zero!!!\n");
-    if( (*msg_offset) == -1 ){
+    for( ; (*msg_offset)<1; )
         msg[++(*msg_offset)] = buf[reader++];
-        printf("%c",buf[reader-1]);
-    }
+
+   /* if( (*msg_offset) == -1 ){
+        msg[++(*msg_offset)] = buf[reader++];
+    }*/
     for( ; reader < len && !(msg[(*msg_offset)-1] == '\r' && msg[*msg_offset] == '\n'); reader++){
 
         msg[++(*msg_offset)] = buf[reader];
@@ -109,8 +114,22 @@ enum cmd_name str2cmd( char *str ){
         return NICK;
     else if( strcmp( str, "USER" ) == 0 )
         return USER;
+    else if( strcmp( str, "PRIVMSG" ) == 0 )
+        return PRIVMSG;
+    else if( strcmp( str, "NOTICE" ) == 0 )
+        return NOTICE;
+    else if( strcmp( str, "MOTD" ) == 0 )
+        return MOTD;
+    else if( strcmp( str, "LUSERS" ) == 0 )
+        return LUSERS;
+    else if( strcmp( str, "PING" ) == 0 )
+        return PING;
+    else if( strcmp( str, "PONG" ) == 0 )
+        return PONG;
+    else if( strcmp( str, "WHOIS" ) == 0 )
+        return WHOIS;
     else{
         fprintf(stderr,"cannot recognize command %s\n",str);
-        return -1;// if command does not exist
+        return UNKNOWNCOMMAND;// if command does not exist
     }
 }

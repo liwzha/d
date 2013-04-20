@@ -34,11 +34,13 @@ void send_rpl( int clientSocket, char* msg ){
     int slen;
     char *msg_to_send;
     slen = strlen(msg);
+    printf("send_rpl: about to send msg:%s\n",msg);
     msg_to_send = malloc(sizeof(char)*slen+2);
     strcat( msg_to_send, msg );
     msg_to_send[slen] = '\r';
     msg_to_send[slen+1] = '\n';
     send(clientSocket, msg_to_send, slen+1, 0);
+    free(msg_to_send);
 }
 
 void recv_msg( int clientSocket, char *buf, int *buf_offset, char *msg, int *msg_offset ){
@@ -48,7 +50,8 @@ printf("inside recv_msg, buf_offset = %d, msg_offset = %d\n",*buf_offset, *msg_o
         if(( numbytes = recv( clientSocket, buf, MAX_MSG_LEN, 0 )) == -1 )
             perror("recv");
     } else
-        numbytes = (*buf_offset);
+        numbytes = 0;//(*buf_offset);
+
     while(( flag=extract_message(buf,buf_offset,numbytes,msg,msg_offset))==-1 ){
 printf("recv_msg:  incomplete msg, waiting for rest of the msg from usr...\n");
         if(( numbytes = recv( clientSocket, buf+(*buf_offset), MAX_MSG_LEN, 0 )) == -1 )
@@ -90,7 +93,7 @@ void add_user_by_nick(char* nick, user_info *usr, char* serverhost){
                serverhost,
                ERR_NICKNAMEINUSE,
                nick);
-           // send_rpl( clientSocket, buffer );
+            send_rpl( clientSocket, buffer );
         }
         else {
             user_info *check_usr=NULL;
@@ -110,7 +113,7 @@ void add_user_by_nick(char* nick, user_info *usr, char* serverhost){
                 
 		char * buffer ;
 		buffer = con_rpl_welcome( serverhost, check_usr );
-		//send_rpl( clientSocket, buffer );
+		send_rpl( clientSocket, buffer );
 				//printf("\nadd %d\n",4);
 	     }
 	     else{
@@ -144,7 +147,7 @@ void add_user_by_uname(char* username,char* full_username,user_info *usr,char* s
 			//New username is added
 			char *buffer;
 			buffer = con_rpl_welcome( serverhost, usr );
-            		//send_rpl( clientSocket, buffer );
+            		send_rpl( clientSocket, buffer );
 		}
 		else{
 			(*check_usr).ui_username=malloc(sizeof(char)*strlen(username));
