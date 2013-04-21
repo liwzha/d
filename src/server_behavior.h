@@ -9,7 +9,7 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
-
+#include <time.h> 
 #include "simclist.h"
 #include "user.h"
 #include "message.h"
@@ -50,5 +50,8 @@ void rpl_whois(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHo
 
 // send err_unknowncommand if the command can't be recognized
 void rpl_unknowcommand(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost);
+
+//send quit message
+void send_quit(user_info* usr, cmd_message parsed_msg, char* serverHost);
 #endif
 

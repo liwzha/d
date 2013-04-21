@@ -104,6 +104,8 @@ enum cmd_name str2cmd( char *str ){
         return PONG;
     else if( strcmp( str, "WHOIS" ) == 0 )
         return WHOIS;
+    else if( strcmp( str, "QUIT" ) == 0 )
+        return QUIT;
     else{
         fprintf(stderr,"cannot recognize command %s\n",str);
         return UNKNOWNCOMMAND;// if command does not exist

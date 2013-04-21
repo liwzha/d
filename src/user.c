@@ -37,6 +37,20 @@ bool is_nick_present(char* nick){
     }
     return value;
 }
+bool is_uname_present(char* uname){
+    //check if a particular  uname is present in the list
+    bool value=0;
+    int i;
+    user_info usr;
+    for(i=0;i<list_size(&user_list);i++){
+	usr = *(user_info *)list_get_at( &user_list, i);
+	if(strcmp(usr.ui_username,uname)==0){
+	    value=1;
+	    return 1;
+	}		
+    }
+    return value;
+}
 
 user_info *create_user( char *nick, char *username, char *fullname, char *hostname, int socket){
     //allocate memory to the new user

@@ -19,14 +19,52 @@ user_info* find_by_nick( list_t *userlist, char * nick_query ){
 }
 
 char* con_rpl_welcome( char *server, user_info *usr ){
-    char* rpl = malloc( sizeof(char)*MAX_MSG_LEN );
-    sprintf(rpl,"%s %s %s :Welcome to the Internet Relay Network %s!%s@%s",
+    char* rpl1 = malloc( sizeof(char)*MAX_MSG_LEN );
+    sprintf(rpl1,"%s %s %s :Welcome to the Internet Relay Network %s!%s@%s, ",
             server,
             RPL_WELCOME,
             usr->ui_nick,
             usr->ui_nick,
             usr->ui_username,
-            usr->ui_hostname);
+            usr->ui_hostname
+	    );
+    
+    char* rpl2 = malloc( sizeof(char)*MAX_MSG_LEN );
+    sprintf(rpl2,"%s Your host is %s, running version %s",
+            RPL_YOURHOST,
+            server,
+  	    "version 1"// TO DO 
+	    );
+    
+    time_t timer;
+    struct tm y2k;
+    y2k.tm_hour = 0;   y2k.tm_min = 0; y2k.tm_sec = 0;
+    y2k.tm_year = 100; y2k.tm_mon = 0; y2k.tm_mday = 1;
+
+    time(&timer); 
+    char* rpl3 = malloc( sizeof(char)*MAX_MSG_LEN );
+    sprintf(rpl3,"%s This server was created %d/%d/%d",
+            RPL_CREATED,
+            y2k.tm_mon,
+	    y2k.tm_mday,
+            y2k.tm_year
+	    );
+  
+    char* rpl4 = malloc( sizeof(char)*MAX_MSG_LEN );
+    sprintf(rpl4,"%s %s %s %s %s",
+            RPL_MYINFO,
+            server,
+	    "version 1", // TO DO
+            "ao", 
+ 	    "mtov"
+            );  
+       
+    char* rpl = malloc( sizeof(char)*MAX_MSG_LEN );
+    sprintf(rpl,"%s \r\n %s \r\n %s\r\n %s \r\n",
+            rpl1,
+	    rpl2,
+            rpl3,
+            rpl4);
     return rpl;
 }
 
@@ -88,6 +126,9 @@ void resp_to_cmd(user_info *usr, cmd_message parsed_msg, char* serverHost){
         case WHOIS:
             rpl_whois(usr, &parsed_msg, serverHost);
             break;
+	case QUIT:
+            send_quit(usr, parsed_msg, serverHost);
+            break;
         default:
             rpl_unknowcommand(usr, &parsed_msg, serverHost);
             break;
@@ -137,13 +178,20 @@ void add_user_by_uname(char* username,char* full_username,user_info *usr,char* s
     int clientSocket=usr->ui_socket;
     check_usr = list_find_socket(clientSocket);// searches for socket
     printf("Add user by username: Client socket=%d\n",clientSocket);
-    if (isempty(check_usr)){
+    if(is_uname_present(username)){
+        // Username already present, send error
+        char buffer [MAX_MSG_LEN];
+        snprintf ( buffer, sizeof(buffer), "%s", ERR_ALREADYREGISTRED);
+        send_rpl( clientSocket, buffer );
+    }
+    else if (isempty(check_usr)){
 	usr->ui_username=username;
 	if(strlen(full_username)!=0)
 	    usr->ui_fullname=full_username;
 	list_append(&user_list,usr);
     }
     else if(strlen((*check_usr).ui_nick)!=0 && !is_user_registered(usr) ){
+	// user already has a nick, with the username it should get a Welcome reply since it gets completely registered now
 	(*check_usr).ui_username=malloc(sizeof(char)*strlen(username));
 	strcpy((*check_usr).ui_username,username);
 	if(strlen(full_username)!=0)
@@ -263,3 +311,21 @@ void rpl_unknowcommand(user_info* sender_info, cmd_message* p_parsed_msg, char* 
                                        , cmd);
     send_rpl( userSock, out_buf );
 }
+
+void send_quit(user_info* usr, cmd_message parsed_msg, char* serverHost){
+    char buffer [MAX_MSG_LEN];
+    if(strlen((char *)list_get_at( &parsed_msg.c_m_parameters, 0))!=0){
+    	snprintf ( buffer, sizeof(buffer),
+                "Closing Link: %s %s",
+                usr->ui_hostname, 
+	        (char *)list_get_at( &parsed_msg.c_m_parameters, 0));
+    }
+    else{
+    	snprintf ( buffer, sizeof(buffer),
+                "Closing Link: %s Client quit",
+                usr->ui_hostname);
+    }
+    printf("Message to be sent:\n%s\nTo socket %d\n",buffer,usr->ui_socket);
+    send_rpl(usr->ui_socket, buffer );
+}
+

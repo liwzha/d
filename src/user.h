@@ -34,5 +34,7 @@ bool is_user_registered(user_info* user);// check if both username and nick are 
 
 user_info* list_find_socket(int socket);//find the user by its socket in the user list
 bool is_nick_present(char* nick);// check if nick is already taken
+bool is_uname_present(char* uname);//check if username is taken
 user_info* list_find_nick(char *nick);
+
 #endif

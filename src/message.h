@@ -9,7 +9,7 @@
 
 #define MAX_MSG_LEN 512
 
-enum cmd_name {NICK, USER, MODE, JOIN, PRIVMSG, NOTICE, MOTD, LUSERS, PING, PONG, WHOIS, UNKNOWNCOMMAND};
+enum cmd_name {NICK, USER, MODE, JOIN, PRIVMSG, NOTICE, MOTD, LUSERS, PING, PONG, WHOIS, UNKNOWNCOMMAND, QUIT};
 
 typedef struct{
     enum cmd_name c_m_command;// list of type char
@@ -21,6 +21,7 @@ typedef struct{
     // if c_m_command is NOTICE, c_m_parameters[0]=nick of recepient user. c_m_parameter[1] = message
     // if c_m_command is PING, c_m_parameters[0]=* 
     // if c_m_command is PONG, c_m_parameters[0]=* 
+    // if c_m_command is QUIT, c_m_parameters[0]=quit message
 
 }cmd_message;
 
