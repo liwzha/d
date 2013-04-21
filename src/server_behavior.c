@@ -66,7 +66,7 @@ char* con_rpl_welcome( char *server, user_info *usr ){
             );  
        
     char* rpl = malloc( sizeof(char)*MAX_MSG_LEN*2 );
-    sprintf(rpl,"%s\r\n%s\r\n%s\r\n%s\r\n%s\r\n", //the last string is just for testing!!!!!
+    sprintf(rpl,"%s\r\n%s\r\n%s\r\n%s\r\n%s", //the last string is just for testing!!!!!
             rpl1,
 	    rpl2,
             rpl3,
@@ -199,7 +199,7 @@ void add_user_by_uname(char* username,char* full_username,user_info *usr,char* s
         char buffer [MAX_MSG_LEN];
         snprintf ( buffer, sizeof(buffer), 
 		   "%s %s", 
-		   serverHost,
+		   serverhost,
                    ERR_ALREADYREGISTRED);
         send_rpl( clientSocket, buffer );
     }
@@ -236,7 +236,7 @@ void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHo
     if(isempty(receiver)|| !is_user_registered(usr) || !is_user_registered(receiver)){
 	if(command==PRIVMSG && command!=NOTICE){
 	    char buffer [MAX_MSG_LEN];
-            snprintf ( buffer, sizeof(buffer),"%s",ERR_NOSUCHNICK);
+            snprintf ( buffer, sizeof(buffer),":%s %s %s %s :No such nick/channel",serverHost,ERR_NOSUCHNICK, usr->ui_nick, list_get_at( &parsed_msg.c_m_parameters, 0 ));
 	    printf("Message to be sent:\n%s\nTo socket %d\n",buffer,usr->ui_socket);
             send_rpl( usr->ui_socket, buffer );
 	}
@@ -262,6 +262,7 @@ void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHo
                 (char*)list_get_at( &parsed_msg.c_m_parameters, 0 ),  
                 (char*)list_get_at( &parsed_msg.c_m_parameters, 1 ));
 	 printf("Message to be sent:\n%s\nTo socket %d\n",buffer,receiver->ui_socket);
+ printf("msg:%s\nlenght=%d\n",(char*)list_get_at( &parsed_msg.c_m_parameters, 1 ),strlen((char*)list_get_at( &parsed_msg.c_m_parameters, 1 )));
          send_rpl(receiver->ui_socket, buffer );
     }
     printf("---------------------------------------------------------------- \n");
