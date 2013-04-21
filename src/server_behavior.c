@@ -164,8 +164,9 @@ void add_user_by_nick(char* nick, user_info *usr, char* serverhost){
         }
     	else if(strlen(check_usr->ui_username)!=0 && !is_user_registered(usr)){ 
             //welcome and add nick
-            (*check_usr).ui_nick=malloc(sizeof(char)*strlen(nick));
-	    strcpy((*check_usr).ui_nick,nick);
+            // (*check_usr).ui_nick=malloc(sizeof(char)*strlen(nick));
+	    // strcpy((*check_usr).ui_nick,nick);
+            check_usr->ui_nick= strdup(nick);	
 	    list_append(&user_list,&check_usr);
                
 	    char * buffer ;
@@ -173,8 +174,9 @@ void add_user_by_nick(char* nick, user_info *usr, char* serverhost){
 	    send_rpl( clientSocket, buffer );
          }
          else{
-             check_usr->ui_nick=malloc(sizeof(char)*strlen(nick));
-   	     strcpy((*check_usr).ui_nick,nick);
+             //check_usr->ui_nick=malloc(sizeof(char)*strlen(nick));            	
+   	     //strcpy((*check_usr).ui_nick,nick);
+	     check_usr->ui_nick= strdup(nick);
 	     list_append(&user_list,&check_usr);
          }
     }
@@ -185,22 +187,28 @@ void add_user_by_uname(char* username,char* full_username,user_info *usr,char* s
     int clientSocket=usr->ui_socket;
     check_usr = list_find_socket(clientSocket);// searches for socket
     printf("Add user by username: Client socket=%d\n",clientSocket);
-    if(is_uname_present(username)){
-        // Username already present, send error
-        char buffer [MAX_MSG_LEN];
-        snprintf ( buffer, sizeof(buffer), "%s", ERR_ALREADYREGISTRED);
-        send_rpl( clientSocket, buffer );
-    }
-    else if (isempty(check_usr)){
+    
+    if (isempty(check_usr)){
 	usr->ui_username=username;
 	if(strlen(full_username)!=0)
 	    usr->ui_fullname=full_username;
 	list_append(&user_list,usr);
     }
+    else if(strlen((*check_usr).ui_username)!=0){
+        // Username already present for that socket
+        char buffer [MAX_MSG_LEN];
+        snprintf ( buffer, sizeof(buffer), 
+		   "%s %s", 
+		   serverHost,
+                   ERR_ALREADYREGISTRED);
+        send_rpl( clientSocket, buffer );
+    }
     else if(strlen((*check_usr).ui_nick)!=0 && !is_user_registered(usr) ){
 	// user already has a nick, with the username it should get a Welcome reply since it gets completely registered now
-	(*check_usr).ui_username=malloc(sizeof(char)*strlen(username));
-	strcpy((*check_usr).ui_username,username);
+       
+	//(*check_usr).ui_username=malloc(sizeof(char)*strlen(username)+1);
+	//strcpy((*check_usr).ui_username,username);
+	check_usr->ui_username = strdup(username);	
 	if(strlen(full_username)!=0)
 	    check_usr->ui_fullname=full_username;
 	list_append(&user_list,&check_usr);
@@ -210,10 +218,11 @@ void add_user_by_uname(char* username,char* full_username,user_info *usr,char* s
         send_rpl( clientSocket, buffer );
     }
     else{
-	(*check_usr).ui_username=malloc(sizeof(char)*strlen(username));
-	strcpy((*check_usr).ui_username,username);
+	//(*check_usr).ui_username=malloc(sizeof(char)*strlen(username)+1);
+	//strcpy((*check_usr).ui_username,username);
+	check_usr->ui_username = strdup(username);		
 	if(strlen(full_username)!=0)
-	usr->ui_fullname=full_username;
+	    usr->ui_fullname=full_username;
 	list_append(&user_list,&check_usr);
     }
 }
