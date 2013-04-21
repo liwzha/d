@@ -268,52 +268,21 @@ printf("inside service_single_client\n");
     
     /* *** expect for user's connection *** */
     while(1){
-       printf("main recv loop....\n"); 
-        pthread_mutex_lock(&lock);
+        printf("main recv loop....\n"); 
+        
         printf("about to call recv_msg\n");
         recv_msg(clientSocket,buf,&buf_offset,msg,&msg_offset );
         printf("returned from recv_msg\n");
         printf("msg:%s\n",msg);
         cmd_message parsed_msg = parse_message(msg);
         printf("returned from parse_message, about to call resp_to_cmd\n");
-        
-        
+
+        pthread_mutex_lock(&lock);
         resp_to_cmd(usr, parsed_msg,serverHost->h_name);
-        
         pthread_mutex_unlock(&lock);
-/*printf("debug: press q to continue...\n");
-char s[20];
-while(1){
-scanf("%s",&s);
-if( s[0] == 'q' )
-  break;
-}*/
+    
     }
     
-    /*
-     while(1)
-     {
-     sprintf(tosend,"%d -- Hello, socket!\n", time(NULL));
-     
-     nbytes = send(socket, tosend, strlen(tosend), 0);
-     
-     if (nbytes == -1 && (errno == ECONNRESET || errno == EPIPE))
-     {
-     fprintf(stderr, "Socket %d disconnected\n", socket);
-     close(socket);
-     free(wa);
-     pthread_exit(NULL);
-     }
-     else if (nbytes == -1)
-     {
-     perror("Unexpected error in send()");
-     free(wa);
-     pthread_exit(NULL);
-     }
-     sleep(5);
-     }
-     
-     */
     close(socket);
     pthread_exit(NULL);
 }

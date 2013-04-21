@@ -20,7 +20,7 @@ user_info* find_by_nick( list_t *userlist, char * nick_query ){
 
 char* con_rpl_welcome( char *server, user_info *usr ){
     char* rpl1 = malloc( sizeof(char)*MAX_MSG_LEN );
-    sprintf(rpl1,"%s %s %s :Welcome to the Internet Relay Network %s!%s@%s, ",
+    sprintf(rpl1,":%s %s %s :Welcome to the Internet Relay Network %s!%s@%s",
             server,
             RPL_WELCOME,
             usr->ui_nick,
@@ -30,10 +30,12 @@ char* con_rpl_welcome( char *server, user_info *usr ){
 	    );
     
     char* rpl2 = malloc( sizeof(char)*MAX_MSG_LEN );
-    sprintf(rpl2,"%s Your host is %s, running version %s",
-            RPL_YOURHOST,
+    sprintf(rpl2,":%s %s %s :Your host is %s, running version %s",
             server,
-  	    "version 1"// TO DO 
+            RPL_YOURHOST,
+            usr->ui_nick,
+            server,
+  	    "version1"// TO DO 
 	    );
     
     time_t timer;
@@ -43,28 +45,33 @@ char* con_rpl_welcome( char *server, user_info *usr ){
 
     time(&timer); 
     char* rpl3 = malloc( sizeof(char)*MAX_MSG_LEN );
-    sprintf(rpl3,"%s This server was created %d/%d/%d",
+    sprintf(rpl3,":%s %s %s :This server was created %d/%d/%d",
+            server,
             RPL_CREATED,
+            usr->ui_nick,
             y2k.tm_mon,
 	    y2k.tm_mday,
             y2k.tm_year
 	    );
   
     char* rpl4 = malloc( sizeof(char)*MAX_MSG_LEN );
-    sprintf(rpl4,"%s %s %s %s %s",
-            RPL_MYINFO,
+    sprintf(rpl4,":%s %s %s %s %s %s %s",
             server,
-	    "version 1", // TO DO
+            RPL_MYINFO,
+            usr->ui_nick,
+            server,
+	    "version1", // TO DO
             "ao", 
  	    "mtov"
             );  
        
-    char* rpl = malloc( sizeof(char)*MAX_MSG_LEN );
-    sprintf(rpl,"%s \r\n %s \r\n %s\r\n %s \r\n",
+    char* rpl = malloc( sizeof(char)*MAX_MSG_LEN*2 );
+    sprintf(rpl,"%s\r\n%s\r\n%s\r\n%s\r\n%s\r\n", //the last string is just for testing!!!!!
             rpl1,
 	    rpl2,
             rpl3,
-            rpl4);
+            rpl4,
+":hostname 251 user1 :There are 1 users and 0 services on 1 servers\r\n:hostname 252 user1 0 :operator(s) online\r\n:hostname 253 user1 0 :unknown connection(s)\r\n:hostname 254 user1 0 :channels formed\r\n:hostname 255 user1 :I have 1 clients and 1 servers\r\n:hostname 422 user1 :MOTD File is missing");
     return rpl;
 }
 
@@ -72,13 +79,13 @@ void send_rpl( int clientSocket, char* msg ){
     int slen;
     char *msg_to_send;
     slen = strlen(msg);
-    printf("send_rpl: about to send msg:%s\n",msg);
+    printf("send_rpl: about to send msg:\n%s\n#EOM#\n",msg);
     msg_to_send = malloc(sizeof(char)*slen+2);
     strcat( msg_to_send, msg );
     msg_to_send[slen] = '\r';
     msg_to_send[slen+1] = '\n';
-    send(clientSocket, msg_to_send, slen+1, 0);
-    free(msg_to_send);
+    send(clientSocket, msg_to_send, slen+2, 0);
+    //free(msg_to_send);
 }
 
 void recv_msg( int clientSocket, char *buf, int *buf_offset, char *msg, int *msg_offset ){
@@ -254,9 +261,9 @@ void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHo
 void send_pong(user_info *usr, char* serverHost){
     char buffer [MAX_MSG_LEN];
     snprintf ( buffer, sizeof(buffer),
-           "PONG %s %s",
-           serverHost,
-           usr->ui_hostname);
+           "PONG");
+//           serverHost);
+//           usr->ui_hostname);
     printf("Message to be sent:\n%s\nTo socket %d\n",buffer,usr->ui_socket);
     send_rpl(usr->ui_socket, buffer );
 }
