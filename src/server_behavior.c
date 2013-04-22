@@ -289,8 +289,8 @@ void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHo
 void send_pong(user_info *usr, char* serverHost){
     char buffer [MAX_MSG_LEN];
     snprintf ( buffer, sizeof(buffer),
-           "PONG");
-//           serverHost);
+           "PONG %s",
+           serverHost);
 //           usr->ui_hostname);
     printf("Message to be sent:\n%s\nTo socket %d\n",buffer,usr->ui_socket);
     send_rpl(usr->ui_socket, buffer );
