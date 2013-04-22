@@ -19,6 +19,9 @@ typedef struct {
 
 // maintain a list of pointers to user_info
 list_t user_list;
+list_t onlineUser_list;
+list_t channel_list;
+int connectionCounter;
 
 
 void print(user_info* usr);

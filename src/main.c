@@ -105,6 +105,9 @@ int main(int argc, char *argv[])
     
     
     list_init(&user_list);
+    list_init(&onlineUser_list);
+    list_init(&channel_list);
+    connectionCounter = 0;
     //Create Server Thread;
     
     struct serverThreadArgs *serverArgs;

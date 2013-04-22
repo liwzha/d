@@ -157,7 +157,7 @@ void add_user_by_nick(char* nick, user_info *usr, char* serverhost){
             // (*check_usr).ui_nick=malloc(sizeof(char)*strlen(nick));
 	    // strcpy((*check_usr).ui_nick,nick);
             check_usr->ui_nick= strdup(nick);	
-	    //list_append(&user_list,&check_usr);
+	    list_append(&onlineUser_list,&check_usr);
                
 	    char * buffer ;
 	    buffer = con_rpl_welcome( serverhost, check_usr );
