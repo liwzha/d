@@ -258,8 +258,6 @@ void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHo
 	    printf("Message to be sent:\n%s\nTo socket %d\n",buffer,usr->ui_socket);
             send_rpl( usr->ui_socket, buffer );
 	}
-	else
-	    exit(1);
     }	
     else {
 	char command_string [MAX_MSG_LEN];
@@ -308,15 +306,16 @@ void rpl_whois(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHo
 
     user_info* p_nick_owner=NULL;
     p_nick_owner = list_find_nick(nick);
-    if( p_nick_owner == NULL ){
-        sprintf(out_buf,":%s %s %s :No such nick/channel",
-        serverHost, ERR_NOSUCHNICK, nick);
+    if( isempty(p_nick_owner) ){
+        sprintf(out_buf,":%s %s %s %s :No such nick/channel",
+        serverHost, ERR_NOSUCHNICK, sender_info->ui_nick, nick);
         send_rpl( userSock, out_buf );
         return;
     } 
     else {
-        sprintf(out_buf,":%s %s %s %s %s * :%s", serverHost
+        sprintf(out_buf,":%s %s %s %s %s %s * %s", serverHost
                                 , RPL_WHOISUSER
+                                , nick
                                 , nick
                                 , p_nick_owner->ui_username
                                 , p_nick_owner->ui_hostname
@@ -325,15 +324,17 @@ void rpl_whois(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHo
     }
     
     // rpl_whoisserver
-    sprintf(out_buf,":%s %s %s %s :server info", serverHost
+    sprintf(out_buf,":%s %s %s %s %s :server info", serverHost
                                 , RPL_WHOISSERVER
+                                , nick
                                 , nick
                                 , serverHost);
     send_rpl( userSock, out_buf );
 
     // rpl_endofwhois
-    sprintf(out_buf,":%s %s %s :End of WHOIS list", serverHost
-                               , RPL_WHOISSERVER
+    sprintf(out_buf,":%s %s %s %s :End of WHOIS list", serverHost
+                               , RPL_ENDOFWHOIS
+                               , nick
                                , nick);
     send_rpl( userSock, out_buf );
 }
@@ -343,8 +344,9 @@ void rpl_unknowcommand(user_info* sender_info, cmd_message* p_parsed_msg, char* 
     int userSock = sender_info->ui_socket;
     char out_buf[MAX_MSG_LEN];
     char *cmd = list_get_at(param,0);
-    sprintf(out_buf,":%s %s %s :Unknown command", serverHost
+    sprintf(out_buf,":%s %s %s %s :Unknown command", serverHost
                                        , ERR_UNKNOWNCOMMAND
+                                       , sender_info->ui_nick
                                        , cmd);
     send_rpl( userSock, out_buf );
 }
