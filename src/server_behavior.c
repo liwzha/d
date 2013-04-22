@@ -53,12 +53,13 @@ char* con_rpl_welcome( char *server, user_info *usr ){
             );  
        
     char* rpl = malloc( sizeof(char)*MAX_MSG_LEN*2 );
-    sprintf(rpl,"%s\r\n%s\r\n%s\r\n%s\r\n%s", //the last string is just for testing!!!!!
+    sprintf(rpl,"%s\r\n%s\r\n%s\r\n%s", 
             rpl1,
 	    rpl2,
             rpl3,
-            rpl4,
-":hostname 251 user1 :There are 1 users and 0 services on 1 servers\r\n:hostname 252 user1 0 :operator(s) online\r\n:hostname 253 user1 0 :unknown connection(s)\r\n:hostname 254 user1 0 :channels formed\r\n:hostname 255 user1 :I have 1 clients and 1 servers\r\n:hostname 422 user1 :MOTD File is missing");
+            rpl4);
+//":hostname 251 user1 :There are 1 users and 0 services on 1 servers\r\n:hostname 252 user1 0 :operator(s) online\r\n:hostname 253 user1 0 :unknown connection(s)\r\n:hostname 254 user1 0 :channels formed\r\n:hostname 255 user1 :I have 1 clients and 1 servers\r\n:hostname 422 user1 :MOTD File is missing"
+//);
     return rpl;
 }
 
@@ -66,7 +67,7 @@ void send_rpl( int clientSocket, char* msg ){
     int slen;
     char *msg_to_send;
     slen = strlen(msg);
-    printf("send_rpl: about to send msg:\n%s\n#EOM#\n",msg);
+    printf("send_rpl: about to send msg (len=%d):\n%s\n#EOM#\n",strlen(msg),msg);
     msg_to_send = malloc(sizeof(char)*slen+2);
     strcat( msg_to_send, msg );
     msg_to_send[slen] = '\r';
@@ -79,6 +80,7 @@ void recv_msg( int clientSocket, char *buf, int *buf_offset, char *msg, int *msg
     int numbytes,flag;
     printf("inside recv_msg, buf_offset = %d, msg_offset = %d\n",*buf_offset, *msg_offset);
     if( (*buf_offset)==0 ){
+printf("about to call recv..............\n");
         if(( numbytes = recv( clientSocket, buf, MAX_MSG_LEN, 0 )) == -1 )
             perror("recv");
     } else
@@ -123,6 +125,10 @@ void resp_to_cmd(user_info *usr, cmd_message parsed_msg, char* serverHost){
         case MOTD:
             rpl_motd(usr, &parsed_msg, serverHost);
             break;
+        case LUSERS:
+printf("*******************case LUSERS *****************\n");
+            rpl_lusers(usr, &parsed_msg, serverHost);
+            break;
 	case QUIT:
             send_quit(usr, parsed_msg, serverHost);
             break;
@@ -155,11 +161,13 @@ void add_user_by_nick(char* nick, user_info *usr, char* serverhost){
     	else if(strlen(check_usr->ui_username)!=0 && !is_user_registered(usr)){ 
             //welcome and add nick
             check_usr->ui_nick= strdup(nick);	
-	    list_append(&onlineUser_list,&check_usr);
+	    list_append(&onlineUser_list,check_usr);
                
 	    char * buffer ;
 	    buffer = con_rpl_welcome( serverhost, check_usr );
 	    send_rpl( clientSocket, buffer );
+            rpl_lusers(check_usr, NULL, serverhost);
+            rpl_motd(check_usr, NULL, serverhost);
          }
          else
 	     check_usr->ui_nick= strdup(nick);
@@ -204,13 +212,18 @@ void add_user_by_uname(char* username,char* full_username,user_info *usr,char* s
     }
     else if(strlen((*check_usr).ui_nick)!=0 && !is_user_registered(usr) ){
 	// user already has a nick, with the username it should get a Welcome reply since it gets completely registered now
+printf("----->>>>>>about to add a user by name<<<<<<<<---------\n");
+printf("current number of user:%d\n",list_size(&onlineUser_list));
 	check_usr->ui_username = strdup(username);	
 	if(strlen(full_username)!=0)
 	    check_usr->ui_fullname=full_username;
-	list_append(&onlineUser_list,&check_usr);
+	list_append(&onlineUser_list,check_usr);
+printf("appended---------->>>current number of user:%d<<<-------------\n",list_size(&onlineUser_list));
 	char *buffer;
 	buffer = con_rpl_welcome( serverhost, usr );
         send_rpl( clientSocket, buffer );
+        rpl_lusers(check_usr, NULL, serverhost);
+        rpl_motd(check_usr, NULL, serverhost);
     }
     else{		
 	if(strlen(full_username)!=0)
@@ -373,11 +386,10 @@ void rpl_motd(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHos
 
     bool fileExist =true;
 
-    list_t * param = &(p_parsed_msg->c_m_parameters);
+    char* nick = sender_info->ui_nick;//list_get_at(param, 0);
 
-    char* nick = list_get_at(param, 0);
-
-
+serverHost = malloc(sizeof(char)*30);
+strcat(serverHost,"hostname"); //!!!!!!!!!!!!!!!!for debug!!!!!!!!!!!!!!!!!!!!11 
 
     if(fr == NULL)
 
@@ -440,7 +452,48 @@ void rpl_motd(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHos
         fclose(fr);
 
     }
-
 }
+
+void rpl_lusers(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost)
+{
+printf("----->> inside rpl_lusers << ------\n");
+    int userSock = sender_info->ui_socket;
+    char out_buf[MAX_MSG_LEN];
+    int numChannels = 0;
+    int registeredUsers = 0;
+    char* nick = sender_info->ui_nick;
+ 
+serverHost = malloc(sizeof(char)*10);
+strcat(serverHost,"hostname\0"); //!!!!!!!!!!!!!!!!for debug!!!!!!!!!!!!!!!!!!!!11 
+    
+    //RPL_LUSERCLIENT number of registered users
+    registeredUsers = checkRegisteredUsersNum();
+    sprintf(out_buf, ":%s %s %s :There are %d users and 0 services on 1 servers", serverHost, RPL_LUSERCLIENT,nick, registeredUsers);
+    send_rpl(userSock, out_buf);
+
+    //RPL_LUSEROP  number of users online
+    sprintf(out_buf, ":%s %s %s %d :operator(s) online", serverHost, RPL_LUSEROP, nick, 0);
+    send_rpl(userSock, out_buf);
+    
+    //RPL_LUSERUNKNOWN  number of connections unknown
+    int unknownConnections = connectionCounter - registeredUsers;
+    sprintf(out_buf, ":%s %s %s %d :unknown connection(s)", serverHost, RPL_LUSERUNKNOWN, nick, unknownConnections);
+    send_rpl(userSock, out_buf);
+    
+    //RPL_LUSERCHANNELS
+    if(&channel_list == NULL)
+        numChannels = 0;
+    else
+        numChannels = list_size(&channel_list);
+    sprintf(out_buf, ":%s %s %s %d :channels formed",serverHost, RPL_LUSERCHANNELS,nick, numChannels);
+    send_rpl(userSock, out_buf);
+    
+    //pthread_mutex_lock(&connectionlock);
+    //RPL_LUSERME   all number of connections(online + unknown)
+    sprintf(out_buf, ":%s %s %s :I have %d clients and 1 servers", serverHost, RPL_LUSERME, nick, connectionCounter);
+    send_rpl(userSock, out_buf);
+    //pthread_mutex_unlock(&connectionlock);
+}
+
 
 

@@ -107,7 +107,7 @@ enum cmd_name str2cmd( char *str ){
     else if( strcmp( str, "QUIT" ) == 0 )
         return QUIT;
     else{
-        fprintf(stderr,"cannot recognize command %s\n",str);
+        fprintf(stderr,"*************cannot recognize command %s*****************\n",str);
         return UNKNOWNCOMMAND;// if command does not exist
     }
 }

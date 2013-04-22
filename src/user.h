@@ -39,5 +39,7 @@ user_info* list_find_socket(int socket);//find the user by its socket in the use
 bool is_nick_present(char* nick);// check if nick is already taken
 bool is_uname_present(char* uname);//check if username is taken
 user_info* list_find_nick(char *nick);
+int checkRegisteredUsersNum();
+
 
 #endif

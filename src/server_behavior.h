@@ -56,5 +56,7 @@ void send_quit(user_info* usr, cmd_message parsed_msg, char* serverHost);
 
 void rpl_motd(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost);
 
+void rpl_lusers(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost);
+
 #endif
 

@@ -7,7 +7,7 @@ user_info * init_user(){
 
 bool isempty(user_info *user){
     // check if the user is empty
-    if(user->ui_socket<=0)//TO DO doesnt handle null
+    if(user->ui_socket<0)//TO DO doesnt handle null
 	return 1;
     else
 	return 0;
@@ -124,6 +124,23 @@ void print(user_info* usr){
 	printf("\nEmpty USER\n");
     }
 }
+
+int checkRegisteredUsersNum()
+{
+printf("inside checkRegisteredUsersNum,length of onlineUser_list--->>%d\n",list_size(&onlineUser_list));
+    int num = 0;
+    for(int i = 0; i < list_size(&onlineUser_list);i++)
+    {
+        user_info *usr;
+        usr = (user_info *)list_get_at(&onlineUser_list, i);
+        if(is_user_registered(usr))
+            num++;
+        else
+            continue;
+    }
+    return num;
+}
+
 /*void printlist(list_t user_list){
 	printf("\nPrintlist");
 	user_info usr;

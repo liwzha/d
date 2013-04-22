@@ -186,6 +186,7 @@ void *accept_clients(void *args)
         
         clientSocket = accept(serverSocket, (struct sockaddr *) &clientAddr, &sinSize);
         
+        connectionCounter++;
         if (clientSocket == -1) {
             perror("accept");
             continue;
