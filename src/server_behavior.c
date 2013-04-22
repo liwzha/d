@@ -154,8 +154,6 @@ void add_user_by_nick(char* nick, user_info *usr, char* serverhost){
         }
     	else if(strlen(check_usr->ui_username)!=0 && !is_user_registered(usr)){ 
             //welcome and add nick
-            // (*check_usr).ui_nick=malloc(sizeof(char)*strlen(nick));
-	    // strcpy((*check_usr).ui_nick,nick);
             check_usr->ui_nick= strdup(nick);	
 	    list_append(&onlineUser_list,&check_usr);
                
@@ -163,12 +161,8 @@ void add_user_by_nick(char* nick, user_info *usr, char* serverhost){
 	    buffer = con_rpl_welcome( serverhost, check_usr );
 	    send_rpl( clientSocket, buffer );
          }
-         else{
-             //check_usr->ui_nick=malloc(sizeof(char)*strlen(nick));            	
-   	     //strcpy((*check_usr).ui_nick,nick);
+         else
 	     check_usr->ui_nick= strdup(nick);
-	    // list_append(&user_list,&check_usr);
-         }
     }
     printf("\n-----------------------------------------------------\n");
     printf("NICK:Number of elements in the list %d", list_size(&user_list));
@@ -210,25 +204,17 @@ void add_user_by_uname(char* username,char* full_username,user_info *usr,char* s
     }
     else if(strlen((*check_usr).ui_nick)!=0 && !is_user_registered(usr) ){
 	// user already has a nick, with the username it should get a Welcome reply since it gets completely registered now
-       
-	//(*check_usr).ui_username=malloc(sizeof(char)*strlen(username)+1);
-	//strcpy((*check_usr).ui_username,username);
 	check_usr->ui_username = strdup(username);	
 	if(strlen(full_username)!=0)
 	    check_usr->ui_fullname=full_username;
-	//list_append(&user_list,&check_usr);
-	//New username is added
+	list_append(&onlineUser_list,&check_usr);
 	char *buffer;
 	buffer = con_rpl_welcome( serverhost, usr );
         send_rpl( clientSocket, buffer );
     }
-    else{
-	//(*check_usr).ui_username=malloc(sizeof(char)*strlen(username)+1);
-	//strcpy((*check_usr).ui_username,username);
-	check_usr->ui_username = strdup(username);		
+    else{		
 	if(strlen(full_username)!=0)
 	    usr->ui_fullname=full_username;
-	//list_append(&user_list,&check_usr);
     }
     printf("\n-----------------------------------------------------\n");
     printf("Uname: Number of elements in the list %d", list_size(&user_list));    
@@ -292,7 +278,6 @@ void send_pong(user_info *usr, char* serverHost){
     snprintf ( buffer, sizeof(buffer),
            "PONG %s",
            serverHost);
-//           usr->ui_hostname);
     printf("Message to be sent:\n%s\nTo socket %d\n",buffer,usr->ui_socket);
     send_rpl(usr->ui_socket, buffer );
 }
@@ -369,6 +354,8 @@ void send_quit(user_info* usr, cmd_message parsed_msg, char* serverHost){
     }
     printf("Message to be sent:\n%s\nTo socket %d\n",buffer,usr->ui_socket);
     send_rpl(usr->ui_socket, buffer );
+    list_delete(&user_list, usr);
+    connectionCounter--;
 }
 
 
