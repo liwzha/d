@@ -82,7 +82,7 @@ char *con_userinfo_str( user_info* user ){
 
 user_info* list_find_socket(int socket){
     //find the user corresponding to a particular socket in the list
-    user_info *usr;
+    user_info *usr = (user_info*)malloc(sizeof(user_info)); 
     user_info* p_usr = init_user();
     int i;
     for(i=0;i<list_size(&user_list);i++){
@@ -97,11 +97,10 @@ user_info* list_find_socket(int socket){
 
 user_info* list_find_nick(char *nick){
     //find the user corresponding to a particular nick in the list
-    user_info *usr;
+    user_info *usr = (user_info*)malloc(sizeof(user_info));    
     user_info* p_usr = init_user();
     int i;
     for(i=0;i<list_size(&user_list);i++){
-	usr = (user_info *)list_get_at( &user_list, i);
 	if(strcmp(usr->ui_nick,nick)==0){
 	    p_usr=usr;
             break;

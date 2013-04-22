@@ -5,19 +5,6 @@ void close_clientSocket( int clientSocket ){
     exit(0);
 }
 
-user_info* find_by_nick( list_t *userlist, char * nick_query ){
-    int i;
-    user_info * p_user;
-    if( userlist == NULL )
-        return NULL;
-    for( i=0; i<list_size(userlist); i++ ){
-        p_user = (user_info *) list_get_at(userlist, i);
-        if( strcmp( p_user->ui_nick, nick_query )==0 )
-            return p_user;
-    }
-    return NULL;
-}
-
 char* con_rpl_welcome( char *server, user_info *usr ){
     char* rpl1 = malloc( sizeof(char)*MAX_MSG_LEN );
     sprintf(rpl1,":%s %s %s :Welcome to the Internet Relay Network %s!%s@%s",
@@ -167,7 +154,7 @@ void add_user_by_nick(char* nick, user_info *usr, char* serverhost){
             // (*check_usr).ui_nick=malloc(sizeof(char)*strlen(nick));
 	    // strcpy((*check_usr).ui_nick,nick);
             check_usr->ui_nick= strdup(nick);	
-	    list_append(&user_list,&check_usr);
+	    //list_append(&user_list,&check_usr);
                
 	    char * buffer ;
 	    buffer = con_rpl_welcome( serverhost, check_usr );
@@ -177,7 +164,7 @@ void add_user_by_nick(char* nick, user_info *usr, char* serverhost){
              //check_usr->ui_nick=malloc(sizeof(char)*strlen(nick));            	
    	     //strcpy((*check_usr).ui_nick,nick);
 	     check_usr->ui_nick= strdup(nick);
-	     list_append(&user_list,&check_usr);
+	    // list_append(&user_list,&check_usr);
          }
     }
 }
@@ -211,7 +198,7 @@ void add_user_by_uname(char* username,char* full_username,user_info *usr,char* s
 	check_usr->ui_username = strdup(username);	
 	if(strlen(full_username)!=0)
 	    check_usr->ui_fullname=full_username;
-	list_append(&user_list,&check_usr);
+	//list_append(&user_list,&check_usr);
 	//New username is added
 	char *buffer;
 	buffer = con_rpl_welcome( serverhost, usr );
@@ -223,7 +210,7 @@ void add_user_by_uname(char* username,char* full_username,user_info *usr,char* s
 	check_usr->ui_username = strdup(username);		
 	if(strlen(full_username)!=0)
 	    usr->ui_fullname=full_username;
-	list_append(&user_list,&check_usr);
+	//list_append(&user_list,&check_usr);
     }
 }
 
@@ -236,7 +223,7 @@ void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHo
     if(isempty(receiver)|| !is_user_registered(usr) || !is_user_registered(receiver)){
 	if(command==PRIVMSG && command!=NOTICE){
 	    char buffer [MAX_MSG_LEN];
-            snprintf ( buffer, sizeof(buffer),":%s %s %s %s :No such nick/channel",serverHost,ERR_NOSUCHNICK, usr->ui_nick, list_get_at( &parsed_msg.c_m_parameters, 0 ));
+            snprintf ( buffer, sizeof(buffer),":%s %s %s %s :No such nick/channel",serverHost,ERR_NOSUCHNICK, usr->ui_nick,(char *) list_get_at( &parsed_msg.c_m_parameters, 0 ));
 	    printf("Message to be sent:\n%s\nTo socket %d\n",buffer,usr->ui_socket);
             send_rpl( usr->ui_socket, buffer );
 	}
@@ -283,18 +270,20 @@ void send_pong(user_info *usr, char* serverHost){
 void rpl_whois(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost){
     list_t * param = &(p_parsed_msg->c_m_parameters);
     int userSock = sender_info->ui_socket;
-    char* nick = list_get_at(param, 0), * surfix;
+    char* nick = list_get_at(param, 0);
     char out_buf[MAX_MSG_LEN];
     if( list_size( param ) > 1 )
         fprintf(stderr,"rpl_whois: receiving more than one parameters!!!!\n");
 
-    user_info* p_nick_owner = find_by_nick( &user_list, nick );
+    user_info* p_nick_owner=NULL;
+    p_nick_owner = list_find_nick(nick);
     if( p_nick_owner == NULL ){
         sprintf(out_buf,":%s %s %s :No such nick/channel",
-          serverHost, ERR_NOSUCHNICK, nick);
+        serverHost, ERR_NOSUCHNICK, nick);
         send_rpl( userSock, out_buf );
         return;
-    } else {
+    } 
+    else {
         sprintf(out_buf,":%s %s %s %s %s * :%s", serverHost
                                 , RPL_WHOISUSER
                                 , nick
