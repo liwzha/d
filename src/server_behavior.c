@@ -372,8 +372,6 @@ void send_quit(user_info* usr, cmd_message parsed_msg, char* serverHost){
 }
 
 
-
-
 void rpl_motd(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost){    
 
     
@@ -391,7 +389,7 @@ void rpl_motd(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHos
     list_t * param = &(p_parsed_msg->c_m_parameters);
 
     char* nick = list_get_at(param, 0);
-    int num_bytes = 0;
+
 
 
     if(fr == NULL)
@@ -408,8 +406,8 @@ void rpl_motd(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHos
 
     {
 
-        num_bytes = fread(messageOfToday,1,MAX_MSG_LEN,fr);
-        messageOfToday[num_bytes] = '\0';
+        fileExist = true;
+
     }
 
     if(!fileExist)
@@ -430,14 +428,32 @@ void rpl_motd(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHos
 
         send_rpl(userSock, out_buf);
 
-        sprintf(out_buf, ":%s %s %s :- %s",serverHost, RPL_MOTD, nick, messageOfToday);
+        
+
+        //Line by Line
+
+        char line[81];
+
+        while(fgets(line, sizeof line, fr)!= NULL)
+
+        {
+
+        sprintf(out_buf, ":%s %s %s :- %s",serverHost, RPL_MOTD, nick, line);
 
         send_rpl(userSock, out_buf);
 
-        sprintf(out_buf, ":%s %s %s :End of MOTD command",serverHost, RPL_ENDOFMOTD, nick);
+        }
+
+        //
+
+        sprintf(out_buf, ":%s %s %s :- End of MOTD command",serverHost, RPL_ENDOFMOTD, nick);
 
         send_rpl(userSock, out_buf);
+
+        fclose(fr);
 
     }
 
 }
+
+
