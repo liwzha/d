@@ -167,6 +167,21 @@ void add_user_by_nick(char* nick, user_info *usr, char* serverhost){
 	    // list_append(&user_list,&check_usr);
          }
     }
+    printf("\n-----------------------------------------------------\n");
+    printf("NICK:Number of elements in the list %d", list_size(&user_list));
+    int i;
+    for(i=0;i<list_size(&user_list);i++){
+		usr = (user_info *)list_get_at( &user_list, i);
+		if(!isempty(usr)){
+			printf("\n:%s:%s:%s:%s:%d",
+                   usr->ui_nick,
+                   usr->ui_username,
+                   usr->ui_fullname,
+                   usr->ui_hostname,
+                   usr->ui_socket);
+		}    
+    }
+    printf("\n-----------------------------------------------------\n");
 }
 
 void add_user_by_uname(char* username,char* full_username,user_info *usr,char* serverhost){
@@ -212,6 +227,21 @@ void add_user_by_uname(char* username,char* full_username,user_info *usr,char* s
 	    usr->ui_fullname=full_username;
 	//list_append(&user_list,&check_usr);
     }
+    printf("\n-----------------------------------------------------\n");
+    printf("Uname: Number of elements in the list %d", list_size(&user_list));    
+    int i;
+    for(i=0;i<list_size(&user_list);i++){
+		usr = (user_info *)list_get_at( &user_list, i);
+		if(!isempty(usr)){
+			printf("\n:%s:%s:%s:%s:%d",
+                   usr->ui_nick,
+                   usr->ui_username,
+                   usr->ui_fullname,
+                   usr->ui_hostname,
+                   usr->ui_socket);
+		}    
+    }
+    printf("\n-----------------------------------------------------\n");
 }
 
 void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHost,enum cmd_name command){
@@ -220,6 +250,7 @@ void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHo
     printf("Inside send private message: NICK %s\n",
            (char *)list_get_at( &parsed_msg.c_m_parameters, 0));
     receiver=list_find_nick(list_get_at( &parsed_msg.c_m_parameters, 0 ));
+
     if(isempty(receiver)|| !is_user_registered(usr) || !is_user_registered(receiver)){
 	if(command==PRIVMSG && command!=NOTICE){
 	    char buffer [MAX_MSG_LEN];

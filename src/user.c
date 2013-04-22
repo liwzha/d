@@ -101,6 +101,7 @@ user_info* list_find_nick(char *nick){
     user_info* p_usr = init_user();
     int i;
     for(i=0;i<list_size(&user_list);i++){
+	usr = (user_info *)list_get_at( &user_list, i);
 	if(strcmp(usr->ui_nick,nick)==0){
 	    p_usr=usr;
             break;
