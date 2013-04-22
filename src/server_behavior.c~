@@ -120,9 +120,6 @@ void resp_to_cmd(user_info *usr, cmd_message parsed_msg, char* serverHost){
         case WHOIS:
             rpl_whois(usr, &parsed_msg, serverHost);
             break;
-        case MOTD:
-            rpl_motd(usr, &parsed_msg, serverHost);
-            break;
 	case QUIT:
             send_quit(usr, parsed_msg, serverHost);
             break;
@@ -391,7 +388,7 @@ void rpl_motd(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHos
     list_t * param = &(p_parsed_msg->c_m_parameters);
 
     char* nick = list_get_at(param, 0);
-    int num_bytes = 0;
+
 
 
     if(fr == NULL)
@@ -408,8 +405,8 @@ void rpl_motd(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHos
 
     {
 
-        num_bytes = fread(messageOfToday,1,MAX_MSG_LEN,fr);
-        messageOfToday[num_bytes] = '\0';
+        fread(messageOfToday,MAX_MSG_LEN,MAX_MSG_LEN,fr);
+
     }
 
     if(!fileExist)

@@ -19,7 +19,7 @@
 void close_clientSocket( int clientSocket );
 
 // find user's info in a list by nick
-user_info* find_by_nick( list_t *userlist, char * nick_query );
+//user_info* find_by_nick( list_t *userlist, char * nick_query );
 
 // construct welcome info
 char* con_rpl_welcome( char *server, user_info *usr );
@@ -53,5 +53,8 @@ void rpl_unknowcommand(user_info* sender_info, cmd_message* p_parsed_msg, char* 
 
 //send quit message
 void send_quit(user_info* usr, cmd_message parsed_msg, char* serverHost);
+
+void rpl_motd(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost);
+
 #endif
 
