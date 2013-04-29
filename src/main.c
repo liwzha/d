@@ -25,10 +25,10 @@
 
 
 #include "user.h"
+#include "channel.h"
 #include "message.h"
 #include "server_behavior.h"
 #include "simclist.h"
-
 
 #define BACKLOG 10
 

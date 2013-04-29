@@ -14,7 +14,7 @@
 #include "user.h"
 #include "message.h"
 #include "reply.h"
-
+#include "channel.h"
 // close a client socket and exit thread
 void close_clientSocket( int clientSocket );
 
@@ -42,6 +42,8 @@ void add_user_by_uname(char* username,char* full_username,user_info *usr, char* 
 // send private message in commands PRIVMSG and NOTICE
 void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHost,enum cmd_name command);
 
+// send private message in commands PRIVMSG and NOTICE
+void send_private_message_usr(user_info *usr, cmd_message parsed_msg, char* serverHost,enum cmd_name command);
 // send PONG in response to PING
 void send_pong(user_info *usr, char* serverHost);
 
@@ -57,6 +59,11 @@ void send_quit(user_info* usr, cmd_message parsed_msg, char* serverHost);
 void rpl_motd(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost);
 
 void rpl_lusers(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost);
+
+void send_join(user_info* usr, cmd_message parsed_msg, char* serverHost);
+
+void send_part(user_info* usr, cmd_message parsed_msg, char* serverHost);
+
 
 #endif
 

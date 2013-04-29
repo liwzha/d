@@ -106,6 +106,20 @@ enum cmd_name str2cmd( char *str ){
         return WHOIS;
     else if( strcmp( str, "QUIT" ) == 0 )
         return QUIT;
+    else if( strcmp( str, "JOIN" ) == 0 )
+        return JOIN;
+    else if( strcmp( str, "PART" ) == 0 )
+        return PART;
+    else if( strcmp( str, "TOPIC" ) == 0 )
+        return TOPIC;
+    else if( strcmp( str, "AWAY" ) == 0 )
+        return AWAY;
+    else if( strcmp( str, "NAMES" ) == 0 )
+        return NAMES;
+    else if( strcmp( str, "LIST" ) == 0 )
+        return LIST;
+    else if( strcmp( str, "WHO" ) == 0 )
+        return WHO;
     else{
         fprintf(stderr,"*************cannot recognize command %s*****************\n",str);
         return UNKNOWNCOMMAND;// if command does not exist

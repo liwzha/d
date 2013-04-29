@@ -15,14 +15,14 @@ typedef struct {
     char *ui_fullname;
     char *ui_hostname;
     int ui_socket;
+    // TO DO MODES
 } user_info;
 
 // maintain a list of pointers to user_info
-list_t user_list;
-list_t onlineUser_list;
-list_t channel_list;
+list_t user_list; // list of user_info
+list_t onlineUser_list; //list of user_info
 int connectionCounter;
-
+//list_t channel_list; //list of channel_info
 
 void print(user_info* usr);
 //void printlist(list_t user_list);

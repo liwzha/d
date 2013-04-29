@@ -126,18 +126,125 @@ void resp_to_cmd(user_info *usr, cmd_message parsed_msg, char* serverHost){
             rpl_motd(usr, &parsed_msg, serverHost);
             break;
         case LUSERS:
-printf("*******************case LUSERS *****************\n");
+            printf("*******************case LUSERS *****************\n");
             rpl_lusers(usr, &parsed_msg, serverHost);
             break;
 	case QUIT:
             send_quit(usr, parsed_msg, serverHost);
+            break;
+	case JOIN:
+            send_join(usr, parsed_msg, serverHost);
+	    break;
+        case PART:
+            send_part(usr, parsed_msg, serverHost);
             break;
         default:
             rpl_unknowcommand(usr, &parsed_msg, serverHost);
             break;
     }
 }
+void send_join(user_info* usr, cmd_message parsed_msg, char* serverHost){
+    char* channel_nick=strdup((char *)list_get_at( &parsed_msg.c_m_parameters, 0));
+    channel_info* chan=find_channel_by_nick(channel_nick);
+    char *all_users=all_users_channel(channel_nick); 
+    char join_msg[MAX_MSG_LEN]; //JOINING MESSAGE 
+    char out_buf1[MAX_MSG_LEN]; //RPL TOPIC
+    char out_buf2[MAX_MSG_LEN]; //RPL NAMREPLY   
+    char out_buf3[MAX_MSG_LEN]; //PRL_ENDOFNAMES     
+    if(chan == NULL){
+        chan=init_channel(channel_nick );        
+    }
+    list_append(&chan->ci_users, usr);
 
+    sprintf(join_msg,":%s %s!%s@%s JOIN %s", serverHost
+                                  , usr->ui_nick
+				  , usr->ui_username
+                                  , usr->ui_hostname
+                                  , channel_nick);
+    circulate_in_channel(chan,join_msg);
+    // TO DO send rpl topic
+    sprintf(out_buf1,":%s %s %s= %s :NO TOPIC", serverHost
+                                  , RPL_NOTOPIC
+				  , usr->ui_nick
+                                  , channel_nick);
+    send_rpl( usr->ui_socket, out_buf1 );
+    // RPL_NAMREPLY   
+    sprintf(out_buf2,":%s %s %s= %s :@%s", serverHost
+                                  , RPL_NAMREPLY
+				  , usr->ui_nick
+                                  , channel_nick
+                                  , all_users);
+    send_rpl( usr->ui_socket, out_buf2 );
+    // RPL_ENDOFNAMES    
+    sprintf(out_buf3,":%s %s %s= %s :End of NAMES list", serverHost
+                                  , RPL_ENDOFNAMES
+				  , usr->ui_nick
+                                  , channel_nick);
+    send_rpl( usr->ui_socket, out_buf3 );
+
+    sprintf(out_buf3,":%s %s %s= %s :End of NAMES list", serverHost
+                                  , RPL_ENDOFNAMES
+				  , usr->ui_nick
+                                  , channel_nick);
+}
+
+// TO DO 
+void send_part(user_info* usr, cmd_message parsed_msg, char* serverHost){
+    char buffer [MAX_MSG_LEN];
+    list_t * param = &(parsed_msg.c_m_parameters);
+    char* channel_nick = list_get_at(param, 0);
+    channel_info* chan=find_channel_by_nick(channel_nick);
+    if(chan == NULL){
+        sprintf(buffer,":%s %s", serverHost
+                                ,  ERR_NOSUCHCHANNEL);
+    }
+    else if (is_user_on_channel(chan, usr)){        
+        sprintf(buffer,":%s %s", serverHost
+                               , ERR_NOTONCHANNEL);
+    }
+    else{
+        list_delete(&chan->ci_users, usr);
+        if(strlen((char *)list_get_at( param, 1))!=0){
+             sprintf(buffer,":%s %s!%s@%s PART %s :%s", serverHost
+                                  , usr->ui_nick
+				  , usr->ui_username
+                                  , usr->ui_hostname
+				  , channel_nick
+                                  , (char *)list_get_at( param, 1));
+             }
+        else{
+    	     sprintf(buffer,":%s %s!%s@%s PART %s", serverHost
+                                  , usr->ui_nick
+				  , usr->ui_username
+                                  , usr->ui_hostname
+				  , channel_nick);
+        }
+        printf("Message to be sent:\n%s\nTo socket %d\n",buffer,usr->ui_socket);
+        circulate_in_channe(chan, buffer );// TO DO circulate
+        if(is_channel_empty(chan)){
+	    list_delete(&channel_list, chan);
+        }
+    }    
+}
+
+void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHost,enum cmd_name command){
+    list_t * param = &(parsed_msg.c_m_parameters);
+    char* nick = list_get_at(param, 0);
+    //check if the receiver is a channel or a user
+    if(nick[0]=='#' || nick[0]=='!' || nick[0]=='&' || nick[0]=='+'){
+	channel_info *chan = find_channel_by_nick(nick); 
+        user_info *usr = (user_info*)malloc(sizeof(user_info)); 
+        int i;
+        for(i=0;i<list_size(&chan->ci_users);i++){
+	    usr = (user_info *)list_get_at( &chan->ci_users, i);
+            param=strdup(usr->ui_nick);
+            send_private_message(usr, parsed_msg, serverHost,command);
+        }
+    }
+    else{
+        send_private_message(usr, parsed_msg, serverHost,command);
+    }
+}
 
 void add_user_by_nick(char* nick, user_info *usr, char* serverhost){
     int clientSocket=usr->ui_socket;
@@ -246,7 +353,7 @@ printf("appended---------->>>current number of user:%d<<<-------------\n",list_s
     printf("\n-----------------------------------------------------\n");
 }
 
-void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHost,enum cmd_name command){
+void send_private_message_usr(user_info *usr, cmd_message parsed_msg, char* serverHost,enum cmd_name command){
     user_info *receiver=NULL;
     printf("----------------------------------------------------------------\n");
     printf("Inside send private message: NICK %s\n",
@@ -373,42 +480,21 @@ void send_quit(user_info* usr, cmd_message parsed_msg, char* serverHost){
 
 
 void rpl_motd(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost){    
-
-    
-
     int userSock = sender_info->ui_socket;
-
     char out_buf[MAX_MSG_LEN];
-
     char messageOfToday[MAX_MSG_LEN];
-
     FILE *fr = fopen("motd.txt","rt");
-
     bool fileExist =true;
-
     char* nick = sender_info->ui_nick;//list_get_at(param, 0);
-
-serverHost = malloc(sizeof(char)*30);
-strcat(serverHost,"hostname"); //!!!!!!!!!!!!!!!!for debug!!!!!!!!!!!!!!!!!!!!11 
-
-    if(fr == NULL)
-
-    {
-
+    serverHost = malloc(sizeof(char)*30);
+    strcat(serverHost,"hostname"); //!!!!!!!!!!!!!!!!for debug!!!!!!!!!!!!!!!!!!!!11 
+    if(fr == NULL)    {
         fprintf(stderr,"Can't open motd file!\n");
-
         fileExist = false;
-
     }
-
-    else
-
-    {
-
+    else    {
         fileExist = true;
-
     }
-
     if(!fileExist)
 
     {
