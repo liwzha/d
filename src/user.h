@@ -16,6 +16,9 @@ typedef struct {
     char *ui_hostname;
     int ui_socket;
     // TO DO MODES
+    int awayMode;
+    int operatorMode;
+    char * awayMessage;
 } user_info;
 
 // maintain a list of pointers to user_info
