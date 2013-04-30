@@ -119,13 +119,13 @@ void resp_to_cmd(user_info *usr, cmd_message parsed_msg, char* serverHost){
 	case PONG:
  	    // DO NOTHING
             break;
-        case WHOIS:
+    case WHOIS:
             rpl_whois(usr, &parsed_msg, serverHost);
             break;
-        case MOTD:
+    case MOTD:
             rpl_motd(usr, &parsed_msg, serverHost);
             break;
-        case LUSERS:
+    case LUSERS:
             printf("*******************case LUSERS *****************\n");
             rpl_lusers(usr, &parsed_msg, serverHost);
             break;
@@ -135,10 +135,19 @@ void resp_to_cmd(user_info *usr, cmd_message parsed_msg, char* serverHost){
 	case JOIN:
             send_join(usr, parsed_msg, serverHost);
 	    break;
-        case PART:
+    case PART:
             send_part(usr, parsed_msg, serverHost);
             break;
-        default:
+    case TOPIC:
+            rpl_topic(usr, &parsed_msg, serverHost);
+    case OPER:
+            rpl_oper(usr, &parsed_msg, serverHost);
+    case MODE:
+            rpl_mode(usr,&parsed_msg, serverHost);
+    case AWAY:
+            rpl_away(usr, &parsed_msg, serverHost);
+            
+    default:
             rpl_unknowcommand(usr, &parsed_msg, serverHost);
             break;
     }
@@ -220,7 +229,7 @@ void send_part(user_info* usr, cmd_message parsed_msg, char* serverHost){
 				  , channel_nick);
         }
         printf("Message to be sent:\n%s\nTo socket %d\n",buffer,usr->ui_socket);
-        circulate_in_channe(chan, buffer );// TO DO circulate
+        circulate_in_channel(chan, buffer );// TO DO circulate
         if(is_channel_empty(chan)){
 	    list_delete(&channel_list, chan);
         }
@@ -579,6 +588,289 @@ strcat(serverHost,"hostname\0"); //!!!!!!!!!!!!!!!!for debug!!!!!!!!!!!!!!!!!!!!
     sprintf(out_buf, ":%s %s %s :I have %d clients and 1 servers", serverHost, RPL_LUSERME, nick, connectionCounter);
     send_rpl(userSock, out_buf);
     //pthread_mutex_unlock(&connectionlock);
+}
+
+void rpl_topic(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost)
+{
+    list_t * param = &(p_parsed_msg->c_m_parameters);
+    int userSock = sender_info->ui_socket;
+    char * nick = sender_info->ui_nick;
+    char * channelName = list_get_at(param, 0);
+    char out_buf[MAX_MSG_LEN];
+    channel_info *channel = find_channel_by_nick(channelName);
+    if(!is_user_on_channel(find_channel_by_nick(channelName), sender_info))
+    {
+        sprintf(out_buf, ":%s %s %s %s :You're not on that channel", serverHost,ERR_NOTONCHANNEL,nick,channelName);
+        send_rpl(userSock, out_buf);
+        return;
+    }
+    if(list_size(param) == 2)
+    {
+        if(!channel->topicSet)
+        {
+            sprintf(out_buf,":%s %s %s %s :No topic is set", serverHost, RPL_NOTOPIC,nick,channelName);
+            send_rpl(userSock, out_buf);
+            return;
+        }
+        else
+        {
+            sprintf(out_buf,":%s %s %s %s :%s",serverHost,RPL_TOPIC,nick,channelName,channel->topic);
+            send_rpl(userSock,out_buf);
+            return;
+        }
+    }
+    else
+    {
+        /*
+         TODO: Check priviledge;
+         */
+        
+        char* newChannelName = list_get_at(param,2);
+        if(strlen(newChannelName) == 0)//Clear the Topic Name
+        {
+            channel->topicSet = 0;
+            channel->topic = "";
+            //Do we need to send any command?
+            return;
+        }
+        else
+        {
+            channel->topicSet = 1;
+            channel->topic = newChannelName;
+            //Do we need to send any command?
+            return;
+        }
+    
+    }
+}
+
+void rpl_oper(user_info * sender_info, cmd_message * p_parsed_msg, char* serverHost)
+{
+    list_t * param = &(p_parsed_msg->c_m_parameters);
+    int userSock = sender_info->ui_socket;
+    char * nick = sender_info->ui_nick;
+    char * userPasswd = list_get_at(param, 1);
+    char out_buf[MAX_MSG_LEN];
+    
+    if(strcmp(userPasswd, serverPasswd) == 0)
+    {
+        user_info *user = list_find_nick(nick);
+        user->operatorMode = 1;
+        sprintf(out_buf, "%s %s %s:You are now an IRC operator",serverHost,RPL_YOUREOPER,nick);
+        send_rpl(userSock, out_buf);
+        return;
+    }
+    else
+    {
+        sprintf(out_buf, "%s %s %s:Password incorrect",serverHost,ERR_PASSWDMISMATCH,nick);
+        send_rpl(userSock, out_buf);
+        return;
+    }
+}
+
+void rpl_mode(user_info * sender_info, cmd_message * p_parsed_msg, char* serverHost)
+{
+    list_t * param = &(p_parsed_msg->c_m_parameters);
+    int userSock = sender_info->ui_socket;
+    char * nick = sender_info->ui_nick;
+    char * userName = sender_info->ui_username;
+    char out_buf[MAX_MSG_LEN];
+    char * name = list_get_at(param, 0);
+    if(name[0]!='#' && name[0]!='&' && name[0]!='!' && name[0]!='+') // User Mode:----Weird Method to Determine whether it's a user mode or not.
+    {
+        if(strcmp(nick,name)!=0)
+        {
+            sprintf(out_buf, "%s %s %s:Cannot change mode for other users",serverHost,ERR_USERSDONTMATCH,nick);
+            send_rpl(userSock, out_buf);
+            return;
+        }
+        else
+        {
+           if(strcmp(list_get_at(param, 1),"-o"))
+           {
+               user_info * user = list_find_nick(nick);
+               user->operatorMode = 0;
+               sprintf(out_buf, "%s :%s %s %s :-o",serverHost,nick,"MODE",nick);
+               send_rpl(userSock, out_buf);
+               return;
+           }
+            else
+            {
+                sprintf(out_buf, "%s %s %s:Unknown MODE flag", serverHost, ERR_UMODEUNKNOWNFLAG,nick);
+                send_rpl(userSock, out_buf);
+                return;
+            }
+        }
+    }
+    
+    else    //Channel Mode
+    {
+        if(list_size(param) == 1)//Channel Mode with one parameter
+        {
+            if(!is_channel_on_list(name))
+            {
+                sprintf(out_buf, "%s %s %s %s :No such channel", serverHost,ERR_NOSUCHCHANNEL,nick,name);
+                send_rpl(userSock, out_buf);
+                return;
+            }
+            else
+            {
+                channel_info *channel = find_channel_by_nick(name);
+                if(channel->topicMode + channel->moderateMode == 2)
+                {
+                    sprintf(out_buf, "%s %s %s %s +%s %s",serverHost,RPL_CHANNELMODEIS,nick,name,"t","m");
+                    send_rpl(userSock, out_buf);
+                    return;
+                }
+                else if(channel->topicMode == 1)
+                {
+                    sprintf(out_buf, "%s %s %s %s +%s",serverHost,RPL_CHANNELMODEIS,nick,name,"t");
+                    send_rpl(userSock, out_buf);
+                    return;
+                }
+                else if(channel->moderateMode == 1)
+                {
+                    sprintf(out_buf, "%s %s %s %s +%s",serverHost,RPL_CHANNELMODEIS,nick,name,"m");
+                    send_rpl(userSock, out_buf);
+                    return;
+                }
+                    else // What if there's no mode?
+                        return;
+            }
+        }
+        
+        else if(list_size(param) == 2)//Channel Mode with two parameters;
+        {
+            if(!is_channel_on_list(name))
+            {
+                sprintf(out_buf, "%s %s %s %s :No such channel",serverHost,ERR_NOSUCHCHANNEL,nick,name);
+                send_rpl(userSock, out_buf);
+                return;
+            }
+            else
+            {
+                channel_info *channel = find_channel_by_nick(name);
+                char * modeString = list_get_at(param, 1);
+                //check priviledge
+                if(list_contains(&(channel->ci_operatorUsers),userName)||sender_info->operatorMode)
+                {
+                    if(modeString[1]!='m' && modeString[1]!='t')//Unknown Mode
+                    {
+                        sprintf(out_buf, "%s %s %s %c :is unknown mode char to me for %s", serverHost,ERR_UNKNOWNMODE,nick,modeString[1],name);
+                        send_rpl(userSock, out_buf);
+                        return;
+                    }
+                    if(modeString[1] == 'm')
+                    {
+                        if(modeString[0] == '+')
+                            channel->moderateMode = 1;
+                        if(modeString[0] == '-')
+                            channel->moderateMode = 0;
+                    }
+                    if(modeString[1] == 't')
+                    {
+                        if(modeString[0] == '+')
+                            channel->topicMode = 1;
+                        if(modeString[0] == '-')
+                            channel->topicMode = 0;
+                    }
+                    /**********************************
+                     TODO: Send Message to the user and All the Users in the channel;
+                     
+                     
+                     ************************************/
+                }
+                else
+                {
+                    sprintf(out_buf, "%s %s %s %s :You're not channel operator",serverHost,ERR_CHANOPRIVSNEEDED,nick,name);
+                    send_rpl(userSock, out_buf);
+                    return;
+                }
+            
+            }
+        }
+        
+        else if(list_size(param) == 3)//Member Status Modes;
+        {
+            if(!is_channel_on_list(name))
+            {
+                sprintf(out_buf, "%s %s %s %s :No such channel",serverHost,ERR_NOSUCHCHANNEL,nick,name);
+                send_rpl(userSock, out_buf);
+                return;
+            }
+            channel_info *channel = find_channel_by_nick(name);
+            char * nickNameOfModifiedUser = list_get_at(param, 2);
+            char * modeString = list_get_at(param, 1);
+            //check priviledge
+            if(!list_contains(&(channel->ci_operatorUsers),userName)&& !sender_info->operatorMode)
+            {
+                sprintf(out_buf, "%s %s %s %s :You're not channel operator",serverHost,ERR_CHANOPRIVSNEEDED,nick,name);
+                send_rpl(userSock, out_buf);
+                return;
+            }
+            else if(!is_user_on_channel(channel, list_find_nick(nickNameOfModifiedUser)))
+            {
+                sprintf(out_buf, "%s %s %s %s %s :They aren't on that channel",serverHost,ERR_USERNOTINCHANNEL,nick,nickNameOfModifiedUser,name);
+                send_rpl(userSock, out_buf);
+                return;
+            }
+            else if(modeString[1]!='o' && modeString[1]!='v')
+            {
+                sprintf(out_buf, "%s %s %s %c :is unknown mode char to me for %s", serverHost,ERR_UNKNOWNMODE,nick,modeString[1],name);
+                send_rpl(userSock, out_buf);
+                return;
+            }
+            else
+            {
+                if(modeString[0] == '+')
+                {
+                    if(modeString[1] == 'o')
+                        list_append(&(channel->ci_operatorUsers),list_find_nick(nickNameOfModifiedUser));
+                    if(modeString[1] == 'v')
+                        list_append(&(channel->ci_voiceUsers), list_find_nick(nickNameOfModifiedUser));
+                }
+                if(modeString[0] == '-')
+                {
+                    if(modeString[1] == 'o')
+                        list_delete(&(channel->ci_operatorUsers), list_find_nick(nickNameOfModifiedUser));
+                    if(modeString[1] == 'v')
+                        list_delete(&(channel->ci_voiceUsers), list_find_nick(nickNameOfModifiedUser));
+                }
+                /*********************
+                 TODO: Send reply to the User and all user in that channel;
+                 *********************/
+            }
+        }
+        
+        else
+            return;
+    }
+}
+
+void rpl_away(user_info * sender_info, cmd_message * p_parsed_msg, char* serverHost)
+{
+    list_t * param = &(p_parsed_msg->c_m_parameters);
+    int userSock = sender_info->ui_socket;
+    char * nick = sender_info->ui_nick;
+    char out_buf[MAX_MSG_LEN];
+    if(list_size(param)==0)
+    {
+        sender_info->awayMode = 0;
+        sender_info->awayMessage = "";
+        sprintf(out_buf, "%s %s %s:You are no longer marked as being away",serverHost,RPL_NOWAWAY,nick);
+        send_rpl(userSock, out_buf);
+        return;
+    }
+    else if(list_size(param)==1)
+    {
+        sender_info->awayMode = 1;
+        sender_info->awayMessage = list_get_at(param, 0);
+        sprintf(out_buf, "%s %s %s:You have been marked as being away", serverHost, RPL_AWAY,nick);
+        send_rpl(userSock, out_buf);
+        return;
+    }
+    else//no else;
+        return;
 }
 
 

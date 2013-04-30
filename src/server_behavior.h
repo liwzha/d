@@ -15,6 +15,8 @@
 #include "message.h"
 #include "reply.h"
 #include "channel.h"
+
+char * serverPasswd;
 // close a client socket and exit thread
 void close_clientSocket( int clientSocket );
 
@@ -59,6 +61,14 @@ void send_quit(user_info* usr, cmd_message parsed_msg, char* serverHost);
 void rpl_motd(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost);
 
 void rpl_lusers(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost);
+
+void rpl_topic(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost);
+
+void rpl_oper(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost);
+
+void rpl_mode(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost);
+
+void rpl_away(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost);
 
 void send_join(user_info* usr, cmd_message parsed_msg, char* serverHost);
 
