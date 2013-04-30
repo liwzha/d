@@ -229,7 +229,7 @@ void send_part(user_info* usr, cmd_message parsed_msg, char* serverHost){
 				  , channel_nick);
         }
         printf("Message to be sent:\n%s\nTo socket %d\n",buffer,usr->ui_socket);
-        circulate_in_channel(chan, buffer );// TO DO circulate
+        circulate_in_channe(chan, buffer );// TO DO circulate
         if(is_channel_empty(chan)){
 	    list_delete(&channel_list, chan);
         }
@@ -622,25 +622,33 @@ void rpl_topic(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHo
     else
     {
         /*
-         TODO: Check priviledge;
+         Check priviledge;
          */
-        
-        char* newChannelName = list_get_at(param,2);
-        if(strlen(newChannelName) == 0)//Clear the Topic Name
+        if(channel->topicMode == 1 && !list_contains(&(channel->ci_operatorUsers),sender_info) && sender_info->operatorMode != 1)
         {
-            channel->topicSet = 0;
-            channel->topic = "";
-            //Do we need to send any command?
+            sprintf(out_buf, "%s %s %s %s :You're not channel operator", serverHost, ERR_CHANOPRIVSNEEDED, nick, channelName);
+            send_rpl(userSock, out_buf);
             return;
         }
         else
         {
-            channel->topicSet = 1;
-            channel->topic = newChannelName;
-            //Do we need to send any command?
-            return;
+            
+            char* newChannelName = list_get_at(param,2);
+            if(strlen(newChannelName) == 0)//Clear the Topic Name
+            {
+                channel->topicSet = 0;
+                channel->topic = "";
+                //Do we need to send any command?
+                return;
+            }
+            else
+            {
+                channel->topicSet = 1;
+                channel->topic = newChannelName;
+                //Do we need to send any command?
+                return;
+            }
         }
-    
     }
 }
 
@@ -752,7 +760,7 @@ void rpl_mode(user_info * sender_info, cmd_message * p_parsed_msg, char* serverH
                 channel_info *channel = find_channel_by_nick(name);
                 char * modeString = list_get_at(param, 1);
                 //check priviledge
-                if(list_contains(&(channel->ci_operatorUsers),userName)||sender_info->operatorMode)
+                if(list_contains(&(channel->ci_operatorUsers),sender_info)||sender_info->operatorMode)
                 {
                     if(modeString[1]!='m' && modeString[1]!='t')//Unknown Mode
                     {
@@ -802,7 +810,7 @@ void rpl_mode(user_info * sender_info, cmd_message * p_parsed_msg, char* serverH
             char * nickNameOfModifiedUser = list_get_at(param, 2);
             char * modeString = list_get_at(param, 1);
             //check priviledge
-            if(!list_contains(&(channel->ci_operatorUsers),userName)&& !sender_info->operatorMode)
+            if(!list_contains(&(channel->ci_operatorUsers),sender_info)&& !sender_info->operatorMode)
             {
                 sprintf(out_buf, "%s %s %s %s :You're not channel operator",serverHost,ERR_CHANOPRIVSNEEDED,nick,name);
                 send_rpl(userSock, out_buf);
