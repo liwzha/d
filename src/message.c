@@ -120,6 +120,10 @@ enum cmd_name str2cmd( char *str ){
         return LIST;
     else if( strcmp( str, "WHO" ) == 0 )
         return WHO;
+    else if( strcmp( str, "OPER" )== 0 )
+        return OPER;
+    else if( strcmp( str, "MODE") == 0)
+        return MODE;
     else{
         fprintf(stderr,"*************cannot recognize command %s*****************\n",str);
         return UNKNOWNCOMMAND;// if command does not exist
