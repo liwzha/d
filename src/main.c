@@ -88,6 +88,8 @@ int main(int argc, char *argv[])
         fprintf(stderr, "ERROR: You must specify an operator password\n");
         exit(-1);
     }
+
+    serverPasswd = strdup(passwd);
     
     
     sigemptyset(&new);
