@@ -97,7 +97,6 @@ channel_info* init_channel(char* nick ){
     chan->ci_nick = strdup(nick);
     chan->topicSet = 0;
     list_init(&chan->ci_users);
-    list_append(&channel_list,chan);
     return chan;
 }
 

@@ -67,7 +67,7 @@ void send_rpl( int clientSocket, char* msg ){
     int slen;
     char *msg_to_send;
     slen = strlen(msg);
-    printf("send_rpl: about to send msg (len=%d):\n%s\n#EOM#\n",strlen(msg),msg);
+    printf("send_rpl: about to send msg (len=%d,socket=%d):\n%s\n#EOM#\n",strlen(msg),clientSocket,msg);
     msg_to_send = malloc(sizeof(char)*slen+2);
     strcat( msg_to_send, msg );
     msg_to_send[slen] = '\r';
@@ -187,7 +187,7 @@ void add_user_by_nick(char* nick, user_info *usr, char* serverhost){
          else
 	     check_usr->ui_nick= strdup(nick);
     }
-    printf("\n-----------------------------------------------------\n");
+    /*printf("\n-----------------------------------------------------\n");
     printf("NICK:Number of elements in the list %d", list_size(&user_list));
     int i;
     for(i=0;i<list_size(&user_list);i++){
@@ -201,7 +201,7 @@ void add_user_by_nick(char* nick, user_info *usr, char* serverhost){
                    usr->ui_socket);
 		}    
     }
-    printf("\n-----------------------------------------------------\n");
+    printf("\n-----------------------------------------------------\n");*/
 }
 
 void add_user_by_uname(char* username,char* full_username,user_info *usr,char* serverhost){
@@ -244,7 +244,7 @@ printf("appended---------->>>current number of user:%d<<<-------------\n",list_s
 	if(strlen(full_username)!=0)
 	    usr->ui_fullname=full_username;
     }
-    printf("\n-----------------------------------------------------\n");
+    /*printf("\n-----------------------------------------------------\n");
     printf("Uname: Number of elements in the list %d", list_size(&user_list));    
     int i;
     for(i=0;i<list_size(&user_list);i++){
@@ -258,47 +258,63 @@ printf("appended---------->>>current number of user:%d<<<-------------\n",list_s
                    usr->ui_socket);
 		}    
     }
-    printf("\n-----------------------------------------------------\n");
+    printf("\n-----------------------------------------------------\n");*/
 }
 void send_join(user_info* usr, cmd_message parsed_msg, char* serverHost){
     char* channel_nick=strdup((char *)list_get_at( &parsed_msg.c_m_parameters, 0));
-    channel_info* chan=find_channel_by_nick(channel_nick);
+    channel_info* chan=find_channel_by_nick(channel_nick); // returns
     char *all_users=all_users_channel(channel_nick); 
     char join_msg[MAX_MSG_LEN]; //JOINING MESSAGE 
     char out_buf1[MAX_MSG_LEN]; //RPL TOPIC
     char out_buf2[MAX_MSG_LEN]; //RPL NAMREPLY   
     char out_buf3[MAX_MSG_LEN]; //PRL_ENDOFNAMES     
-    if(chan == NULL){
-        chan=init_channel(channel_nick );        
-    }
+    if(chan==NULL){
+        chan=init_channel(channel_nick ); 
+	 
+    }   
     list_append(&chan->ci_users, usr);
-
-    sprintf(join_msg,":%s %s!%s@%s JOIN %s", serverHost
-                                  , usr->ui_nick
-				  , usr->ui_username
-                                  , usr->ui_hostname
-                                  , channel_nick);
-    printf("Message to be sent:\n%s\n",join_msg);
+    list_append(&channel_list,chan);       
+    printf("\n\n-----------------------------------------------------\n");
+    printf("send_join: Number of channels in channel_list %d", list_size(&channel_list));    
+    int i;
+    for(i=0;i<list_size(&channel_list);i++){
+        channel_info* print_chan = (channel_info *)list_get_at( &channel_list, i);
+	    //if(!is_channel_empty(print_chan)){
+		printf("\n:%s:%d",
+                print_chan->ci_nick,
+                list_size(&print_chan->ci_users));
+	    //}    
+    }
+    printf("\n-----------------------------------------------------\n");
+    sprintf(join_msg,":%s!%s@%s JOIN %s", 
+			usr->ui_nick
+   		      , usr->ui_username
+                      , usr->ui_hostname
+                      , channel_nick );
     circulate_in_channel(chan,join_msg);
-    // TO DO send rpl topic
-    sprintf(out_buf1,":%s %s %s= %s :NO TOPIC", serverHost
-                                  , RPL_NOTOPIC
-				  , usr->ui_nick
-                                  , channel_nick);
-    send_rpl( usr->ui_socket, out_buf1 );
-    // RPL_NAMREPLY   
-    //if( is_user_voice_user(chan, usr))
-    sprintf(out_buf2,":%s %s %s= %s :@%s", serverHost
-                                  , RPL_NAMREPLY
-				  , usr->ui_nick
-                                  , channel_nick
-                                  , all_users);
+    if(chan->topicSet){
+        sprintf(out_buf1,":%s %s %s %s :%s",
+	  		serverHost,
+			RPL_TOPIC,
+			usr->ui_nick,
+			channel_nick,
+			chan->topic);
+	send_rpl( usr->ui_socket, out_buf1);
+    }
+	//RPL_NAMREPLY
+    sprintf(out_buf2,":%s %s %s = %s :%s foobar2",
+			serverHost, 
+			RPL_NAMREPLY, 
+			usr->ui_nick,
+                        channel_nick,
+                        usr->ui_nick);
     send_rpl( usr->ui_socket, out_buf2 );
-    // RPL_ENDOFNAMES    
-    sprintf(out_buf3,":%s %s %s= %s :End of NAMES list", serverHost
-                                  , RPL_ENDOFNAMES
-				  , usr->ui_nick
-                                  , channel_nick);
+        // RPL_ENDOFNAMES    
+    sprintf(out_buf3,":%s %s %s %s :End of NAMES list", 
+			serverHost,
+			RPL_ENDOFNAMES,
+		        usr->ui_nick,
+                        channel_nick);
     send_rpl( usr->ui_socket, out_buf3 );
 }
 
