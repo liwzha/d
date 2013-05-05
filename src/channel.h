@@ -26,6 +26,8 @@ list_t channel_list; //list of channel_info
 void circulate_in_channel( channel_info* channel, char* message);
 bool is_channel_empty( channel_info* channel);
 bool is_user_on_channel( channel_info* channel, user_info* sender);
+bool is_user_voice_user( channel_info* channel, user_info* sender);
+bool is_user_operator_user( channel_info* channel, user_info* sender);
 char * all_users_channel( char* nick);
 bool is_channel_on_list(char* nick);
 channel_info* find_channel_by_nick( char* nick);

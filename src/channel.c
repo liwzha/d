@@ -6,7 +6,9 @@ void circulate_in_channel(channel_info* chan, char* message){
     int i;
     for(i=0;i<list_size(&chan->ci_users);i++){
         usr = (user_info *)list_get_at( &chan->ci_users, i);
-        send_rpl(usr->ui_socket, message);
+	if(usr->awayMode != 1){
+            send_rpl(usr->ui_socket, message);
+	}
     }
 }
 bool is_channel_empty(channel_info* channel){
@@ -21,6 +23,28 @@ bool is_user_on_channel( channel_info* channel, user_info* sender){
     int i;
     for(i = 0; i < list_size( &channel->ci_users); i++){
         usr = (user_info *)list_get_at( &channel->ci_users, i);
+        if(usr->ui_socket==sender->ui_socket){
+            return 1;
+        }
+    }
+    return 0;
+}
+bool is_user_voice_user( channel_info* channel, user_info* sender){
+    user_info *usr = (user_info*)malloc(sizeof(user_info));
+    int i;
+    for(i = 0; i < list_size( &channel->ci_voiceUsers); i++){
+        usr = (user_info *)list_get_at( &channel->ci_voiceUsers, i);
+        if(usr->ui_socket==sender->ui_socket){
+            return 1;
+        }
+    }
+    return 0;
+}
+bool is_user_operator_user( channel_info* channel, user_info* sender){
+    user_info *usr = (user_info*)malloc(sizeof(user_info));
+    int i;
+    for(i = 0; i < list_size( &channel->ci_operatorUsers); i++){
+        usr = (user_info *)list_get_at( &channel->ci_operatorUsers, i);
         if(usr->ui_socket==sender->ui_socket){
             return 1;
         }
@@ -55,9 +79,6 @@ bool is_channel_on_list(char* nick){
     }
     return find;
 }
-
-
-
 channel_info* find_channel_by_nick(char* nick){
     channel_info *chan = (channel_info*)malloc(sizeof(channel_info));
     channel_info* p_chan = init_channel(nick);
