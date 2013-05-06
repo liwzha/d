@@ -75,5 +75,16 @@ void send_join(user_info* usr, cmd_message parsed_msg, char* serverHost);
 void send_part(user_info* usr, cmd_message parsed_msg, char* serverHost);
 
 
+
+
+void rpl_names(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost);
+
+void rpl_list(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost);
+
+void rpl_who(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost);
+
+void send_rpl_whoreply(char* serverHost, channel_info* p_chan_info, user_info* sender_info, user_info* query_user_info, bool flag_hasparam);
+
+
 #endif
 

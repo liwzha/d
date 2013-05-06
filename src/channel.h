@@ -34,5 +34,5 @@ channel_info* find_channel_by_nick( char* nick);
 channel_info* init_channel( char* nick);
 
 
-
+list_t find_channel_of_user(char *nick);
 #endif

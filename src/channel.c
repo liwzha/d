@@ -100,3 +100,33 @@ channel_info* init_channel(char* nick ){
     return chan;
 }
 
+
+
+list_t find_channel_of_user(char *nick){
+   int i,j;
+   user_info *pt_usr=NULL, *pt_tmpusr = NULL;
+   channel_info *pt_chan;
+   list_t loc_channel;
+   list_init(&loc_channel);
+
+   for( i=0; i<list_size(&user_list); i++ ){
+     pt_tmpusr = list_get_at(&user_list, i);
+     if( strcmp( pt_tmpusr->ui_nick, nick ) == 0 ){
+       pt_usr = pt_tmpusr;
+       break;
+     }
+   }
+   
+   if( pt_usr == NULL ){
+      fprintf(stderr, "find_channel_of_user: cannot find user with the nick: %s\n", nick);  
+      exit(1);
+   }
+   
+   for( i=0; i<list_size(&channel_list); i++ ){
+     pt_chan = list_get_at(&channel_list, i);
+     if( is_user_on_channel( pt_chan, pt_usr ) )
+        list_append(&loc_channel, pt_usr);
+   }
+   return loc_channel;
+}
+

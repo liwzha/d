@@ -469,11 +469,13 @@ void send_pong(user_info *usr, char* serverHost){
 
 
 
+
 void rpl_whois(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost){
     list_t * param = &(p_parsed_msg->c_m_parameters);
     int userSock = sender_info->ui_socket;
     char* nick = list_get_at(param, 0);
     char out_buf[MAX_MSG_LEN];
+    int i,j;
     if( list_size( param ) > 1 )
         fprintf(stderr,"rpl_whois: receiving more than one parameters!!!!\n");
 
@@ -495,7 +497,37 @@ void rpl_whois(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHo
                                 , p_nick_owner->ui_fullname);
        send_rpl( userSock, out_buf );
     }
-    
+    // rpl_whoischannels
+    bool do_rplwhoischannels = 0;
+    for( i=0; i<list_size(&channel_list); i++ ){
+        channel_info *pt_chan = list_get_at(&channel_list,i);
+        for( j=0; j<list_size(&(pt_chan->ci_operatorUsers)); j++ ){
+            user_info *p_usr_loc = list_get_at(&pt_chan->ci_operatorUsers,j);
+            if( strcmp( p_usr_loc->ui_nick, nick )==0 ){
+                if( do_rplwhoischannels == 0 )
+                   sprintf(out_buf,":%s %s %s :@%s",serverHost, RPL_WHOISCHANNELS, nick, pt_chan->ci_nick);
+                else
+                   sprintf(out_buf+strlen(out_buf)," @%s", pt_chan->ci_nick);
+                do_rplwhoischannels=1;
+                break;
+            }
+        }
+        for( j=0; j<list_size(&(pt_chan->ci_operatorUsers)); j++ ){
+            user_info *p_usr_loc = list_get_at(&pt_chan->ci_operatorUsers,j);
+            if( strcmp( p_usr_loc->ui_nick, nick )==0 ){
+                if( do_rplwhoischannels == 0 )
+                   sprintf(out_buf,":%s %s %s :+%s",serverHost, RPL_WHOISCHANNELS, nick, pt_chan->ci_nick);
+                else
+                   sprintf(out_buf+strlen(out_buf)," +%s", pt_chan->ci_nick);
+                do_rplwhoischannels=1;
+                break;
+            }
+        }
+    }
+    if( do_rplwhoischannels )
+        send_rpl( userSock, out_buf );
+
+   
     // rpl_whoisserver
     sprintf(out_buf,":%s %s %s %s %s :server info", serverHost
                                 , RPL_WHOISSERVER
@@ -503,7 +535,25 @@ void rpl_whois(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHo
                                 , nick
                                 , serverHost);
     send_rpl( userSock, out_buf );
+     
+    // rpl_away
+    if( p_nick_owner->awayMode ){
+        sprintf(out_buf, ":%s %s %s %s :%s", serverHost 
+                                , RPL_AWAY
+                                , nick
+                                , nick
+                                , p_nick_owner->awayMessage);
+        send_rpl( userSock, out_buf );
+    }
 
+    // rpl_whoisoperator
+    if( p_nick_owner->operatorMode ){
+        sprintf(out_buf,":%s %s %s %s :is an IRC operator", serverHost
+                                , RPL_WHOISOPERATOR
+                                , nick
+                                , nick);
+        send_rpl( userSock, out_buf );
+    }
     // rpl_endofwhois
     sprintf(out_buf,":%s %s %s %s :End of WHOIS list", serverHost
                                , RPL_ENDOFWHOIS
@@ -937,5 +987,182 @@ void rpl_away(user_info * sender_info, cmd_message * p_parsed_msg, char* serverH
         return;
 }
 
+
+
+
+void rpl_names(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost){
+   list_t loc_channel_list; // a local copy of a list of *channel_info whose info of current users will be sent back in response to the cmd NAMES
+   list_init( &loc_channel_list );
+   list_t * p_param = &(p_parsed_msg->c_m_parameters);
+   char * chan_nick;
+   channel_info* pt_chan;
+   user_info* pt_usr;
+   int i,j,k;
+   char out_buf[1024];
+   // construct the local copy
+   if( list_size( p_param ) == 1 ){
+      chan_nick = strdup(list_get_at( p_param, 0 ));
+      pt_chan = find_channel_by_nick( chan_nick );
+      list_append( &loc_channel_list, pt_chan ); 
+   }
+   else{
+      for( i=0; i<list_size( &channel_list ); i++ ){
+        pt_chan = list_get_at( &channel_list, i );
+        list_append( &loc_channel_list, pt_chan );
+      }
+   }
+   
+   for( i=0; i<list_size( &loc_channel_list ); i++ ){
+     // construct info about the i-th channel
+     pt_chan = list_get_at( &loc_channel_list,i );
+     sprintf(out_buf,":%s %s %s %s :", serverHost,RPL_NAMREPLY,sender_info->ui_nick, pt_chan->ci_nick);    
+
+     // add nick in ci_users
+     for( j=0; j< list_size(&(pt_chan->ci_users)); j++ ){
+       pt_usr = list_get_at(&(pt_chan->ci_users),j);
+       if( list_locate( &(pt_chan->ci_voiceUsers),&pt_usr)>=0 )
+           sprintf(out_buf+strlen(out_buf),"+%s ", pt_usr->ui_nick);
+       if( list_locate( &(pt_chan->ci_voiceUsers),&pt_usr)>=0 )
+           sprintf(out_buf+strlen(out_buf),"@%s ", pt_usr->ui_nick);
+       else
+           sprintf(out_buf+strlen(out_buf),"%s ", pt_usr->ui_nick);
+     }
+
+     out_buf[ strlen(out_buf) - 1 ] = '\0';
+     send_rpl( sender_info->ui_socket, out_buf );
+   }
+   
+   // send RPL_ENDOFNAMES
+   sprintf(out_buf,":%s %s %s :End of NAMES list", serverHost,RPL_ENDOFNAMES,sender_info->ui_nick);
+   send_rpl( sender_info->ui_socket, out_buf );
+}
+
+void rpl_list(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost){
+   list_t loc_channel_list; // a local copy of a list of *channel_info whose info of current users will be sent back in response to the cmd NAMES
+   list_init( &loc_channel_list );
+   list_t * p_param = &(p_parsed_msg->c_m_parameters);
+   char * chan_nick;
+   channel_info* pt_chan;
+   user_info* pt_usr;
+   int i,j,k;
+   char out_buf[1024];
+   // construct the local copy
+   if( list_size( p_param ) == 1 ){
+      chan_nick = strdup(list_get_at( p_param, 0 ));
+      pt_chan = find_channel_by_nick( chan_nick );
+      list_append( &loc_channel_list, pt_chan ); 
+   }
+   else{
+      for( i=0; i<list_size( &channel_list ); i++ ){
+        pt_chan = list_get_at( &channel_list, i );
+        list_append( &loc_channel_list, pt_chan );
+      }
+   }
+
+   for( i=0; i<list_size( &loc_channel_list ); i++ ){
+     // construct info about the i-th channel
+     pt_chan = list_get_at( &loc_channel_list,i );
+     sprintf(out_buf,":%s %s %s %s %d :%s", serverHost,RPL_LIST,sender_info->ui_nick, pt_chan->ci_nick, list_size(&(pt_chan->ci_users)),pt_chan->topic);
+     send_rpl( sender_info->ui_socket, out_buf );
+   }
+   
+   // send RPL_ENDOFLIST
+   sprintf(out_buf,":%s %s %s :End of LIST", serverHost,RPL_LISTEND,sender_info->ui_nick);
+   send_rpl( sender_info->ui_socket, out_buf );
+}
+
+void send_rpl_whoreply(char* serverHost, channel_info* p_chan_info, user_info* sender_info, user_info* query_user_info, bool flag_hasparam){
+
+    char out_buf[1024];
+    if( flag_hasparam )
+        sprintf(out_buf,":%s %s %s %s %s %s %s %s %c %s%s%s:0 %s", 
+                              serverHost,RPL_WHOREPLY,
+                              sender_info->ui_nick, 
+                              p_chan_info->ci_nick, 
+                              query_user_info->ui_username,
+                              query_user_info->ui_hostname,
+                              serverHost,
+                              query_user_info->ui_nick,
+                              query_user_info->awayMode?'H':'G',
+                              query_user_info->operatorMode?"* ":"",
+                 is_user_operator_user(p_chan_info,query_user_info)?"@ ":"",
+                 is_user_voice_user(p_chan_info,query_user_info)?"+ ":"",
+                                     query_user_info->ui_fullname
+                                              );
+    else
+        sprintf(out_buf,":%s %s %s * %s %s %s %s %c %s:0 %s", 
+                                      serverHost,RPL_WHOREPLY,
+                                      sender_info->ui_nick, 
+                                      query_user_info->ui_username,
+                                      query_user_info->ui_hostname,
+                                      serverHost,
+                                      query_user_info->ui_nick,
+                                      query_user_info->awayMode?'H':'G',
+                                    query_user_info->operatorMode?"* ":"",
+                                     query_user_info->ui_fullname
+                                              );
+ 
+    send_rpl(sender_info->ui_socket, out_buf);
+ 
+
+
+}
+
+void rpl_who(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost){
+  list_t * p_param = &(p_parsed_msg->c_m_parameters);
+  bool flag_hasparam;
+
+  flag_hasparam = list_size(p_param) > 0;
+  list_t loc_channel_list;
+  list_init( &loc_channel_list );
+  char * chan_nick;
+  channel_info* pt_chan;
+  user_info* pt_usr;
+  int i,j,k;
+  char out_buf[1024];
+
+  if( flag_hasparam ){
+    chan_nick = list_get_at(p_param,0);
+    pt_chan = NULL;
+    for( i=0; i<list_size(&channel_list); i++ ){
+      pt_chan = list_get_at(&channel_list,i);
+      if( strcmp( pt_chan->ci_nick, chan_nick) == 0 ){
+         break;
+      }
+    }
+    if( pt_chan==NULL ){
+      fprintf(stderr,"rpl_who: cannot find channel %s\n",chan_nick);
+      exit(1);
+    }
+    for( i=0; i<list_size(&user_list); i++ ){
+      pt_usr = list_get_at(&user_list,i);
+      
+      send_rpl_whoreply(serverHost, pt_chan, sender_info, pt_usr, flag_hasparam);
+    }
+    sprintf(out_buf, ":%s %s %s %s :End of WHO list",serverHost,RPL_ENDOFWHO,sender_info->ui_nick,chan_nick);
+    
+  }
+  else{ // if does not have a parameter -- a channel is not specified
+  
+    for( i=0; i<list_size(&user_list); i++ ){
+      pt_usr = list_get_at(&user_list, i);
+      loc_channel_list = find_channel_of_user(pt_usr->ui_nick);
+      bool loc_flag = 0;
+      for( j=0; j<list_size(&loc_channel_list); j++ ){ // check if sender has common channel
+         pt_chan = list_get_at(&loc_channel_list,j);
+         if( is_user_on_channel( pt_chan, sender_info ) ){
+           loc_flag = 1;
+           break;
+         }
+      }
+      if( loc_flag == 1 )
+           continue;
+      send_rpl_whoreply(serverHost,NULL, sender_info, pt_usr, flag_hasparam); 
+    }
+    sprintf(out_buf, ":%s %s %s :End of WHO list",serverHost,RPL_ENDOFWHO,sender_info->ui_nick);
+  }//end else
+  send_rpl( sender_info->ui_socket, out_buf ); 
+
+}
 
 
