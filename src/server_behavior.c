@@ -1,7 +1,4 @@
 #include "server_behavior.h"
-#include <cstring>
-#include <atlstr.h>
-#include <string.h>
 void close_clientSocket( int clientSocket ){
     close(clientSocket);
     exit(0);
