@@ -276,7 +276,7 @@ void send_join(user_info* usr, cmd_message parsed_msg, char* serverHost){
     } 
     if( !is_user_on_channel (chan, usr)){
     	list_append(&chan->ci_users, usr);
-    	printf("\n\n-----------------------------------------------------\n");
+    	/*printf("\n\n-----------------------------------------------------\n");
     	printf("send_join: Number of channels in channel_list %d", list_size(&channel_list));    
     	int i;
     	for(i=0;i<list_size(&channel_list);i++){
@@ -287,7 +287,7 @@ void send_join(user_info* usr, cmd_message parsed_msg, char* serverHost){
     	            list_size(&print_chan->ci_users));
 		    //}    
     	}
-    	printf("\n-----------------------------------------------------\n");
+    	printf("\n-----------------------------------------------------\n");*/
     	sprintf(join_msg,":%s!%s@%s JOIN %s", 
 				usr->ui_nick
    			      , usr->ui_username
@@ -321,7 +321,6 @@ void send_join(user_info* usr, cmd_message parsed_msg, char* serverHost){
     }
 }
 
-// TO DO 
 void send_part(user_info* usr, cmd_message parsed_msg, char* serverHost){
     char buffer [MAX_MSG_LEN];
     list_t * param = &(parsed_msg.c_m_parameters);
@@ -332,34 +331,51 @@ void send_part(user_info* usr, cmd_message parsed_msg, char* serverHost){
 				serverHost,
 				ERR_NOSUCHCHANNEL,
 				usr->ui_nick,
-		  		chan->ci_nick);
+		  		channel_nick);
+	send_rpl( usr->ui_socket, buffer);
     }
-    else if (is_user_on_channel(chan, usr)){        
+    else if (!is_user_on_channel(chan, usr)){        
         sprintf(buffer,":%s %s %s %s :You're not on that channel", 
 				serverHost,
 				ERR_NOTONCHANNEL,
 				usr->ui_nick,
 		  		chan->ci_nick);
+	send_rpl( usr->ui_socket, buffer);
     }
     else{
-        list_delete(&chan->ci_users, usr);
-        if(strlen((char *)list_get_at( param, 1))!=0){
-             sprintf(buffer,":%s %s!%s@%s PART %s :%s", serverHost
-                                  , usr->ui_nick
-				  , usr->ui_username
-                                  , usr->ui_hostname
-				  , channel_nick
-                                  , (char *)list_get_at( param, 1));
-             }
-        else{
-    	     sprintf(buffer,":%s %s!%s@%s PART %s", serverHost
-                                  , usr->ui_nick
-				  , usr->ui_username
-                                  , usr->ui_hostname
-				  , channel_nick);
+        
+	//printf("\nNikita\n");
+	printf("\n\n-----------------------------------------------------\n");
+    	printf("send_part: Number of channels in channel_list %d", list_size(&channel_list));    
+    	int i;
+    	for(i=0;i<list_size(&channel_list);i++){
+    	    channel_info* print_chan = (channel_info *)list_get_at( &channel_list, i);
+		    //if(!is_channel_empty(print_chan)){
+			printf("\n:%s:%d",
+    	            print_chan->ci_nick,
+    	            list_size(&print_chan->ci_users));
+		    //}    
+    	}
+	//printf("\n%s %s\n",list_get_at( param, 0),list_get_at( param, 1),list_get_at( param, 2));
+    	printf("\n-----------------------------------------------------\n");
+        if(list_get_at( param, 1)!=NULL){
+             sprintf(buffer,":%s!%s@%s PART %s %s", 
+				  usr->ui_nick,
+				  usr->ui_username,
+                                  usr->ui_hostname,
+				  channel_nick,
+                                  (char *)list_get_at( param, 1));
         }
-        printf("Message to be sent:\n%s\nTo socket %d\n",buffer,usr->ui_socket);
+        else{
+    	     sprintf(buffer,":%s!%s@%s PART %s", 
+                                  usr->ui_nick,
+				  usr->ui_username,
+                                  usr->ui_hostname,
+				  channel_nick);
+        }
+	printf("Message to be sent:\n%s\n",buffer);        
         circulate_in_channel(chan, buffer );
+	list_delete(&chan->ci_users, usr);
         if(is_channel_empty(chan)){
 	    list_delete(&channel_list, chan);
         }
