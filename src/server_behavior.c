@@ -261,19 +261,23 @@ printf("appended---------->>>current number of user:%d<<<-------------\n",list_s
     printf("\n-----------------------------------------------------\n");*/
 }
 void send_join(user_info* usr, cmd_message parsed_msg, char* serverHost){
-    char* channel_nick=strdup((char *)list_get_at( &parsed_msg.c_m_parameters, 0));
+    char* channel_nick=strdup((char *)list_get_at( &parsed_msg.c_m_parameters, 0));   
     channel_info* chan=find_channel_by_nick(channel_nick); // returns
+    
     char *all_users=all_users_channel(channel_nick); 
     char join_msg[MAX_MSG_LEN]; //JOINING MESSAGE 
     char out_buf1[MAX_MSG_LEN]; //RPL TOPIC
     char out_buf2[MAX_MSG_LEN]; //RPL NAMREPLY   
     char out_buf3[MAX_MSG_LEN]; //PRL_ENDOFNAMES     
-    if(chan==NULL){
-        chan=init_channel(channel_nick ); 
-	 
-    }   
-    list_append(&chan->ci_users, usr);
-    list_append(&channel_list,chan);       
+    if( is_channel_empty (chan)){
+        chan->ci_nick = strdup(channel_nick);
+        chan->topicSet = 0;
+        list_init(&chan->ci_users);
+	list_append(&channel_list,chan);
+    } 
+    if( !is_user_on_channel (chan, usr)){
+    	list_append(&chan->ci_users, usr);
+    }
     printf("\n\n-----------------------------------------------------\n");
     printf("send_join: Number of channels in channel_list %d", list_size(&channel_list));    
     int i;
@@ -364,12 +368,15 @@ void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHo
 	channel_info *chan = find_channel_by_nick(nick); 
 	if( chan->moderateMode == 2 ){// moderate mode =m
 	    if( is_user_voice_user(chan, usr)){
-	    	user_info *usr = (user_info*)malloc(sizeof(user_info)); 
+	    	user_info *usr_2 = (user_info*)malloc(sizeof(user_info)); 
             	int i;
             	for(i=0;i<list_size(&chan->ci_users);i++){
-	        	usr = (user_info *)list_get_at( &chan->ci_users, i);
-                	param=strdup(usr->ui_nick);
-                	send_private_message_usr(usr, parsed_msg, serverHost,command);
+	        	usr_2 = (user_info *)list_get_at( &chan->ci_users, i);
+			if(strcmp(usr_2->ui_nick,usr->ui_nick) !=0){
+				list_delete_at(&(parsed_msg.c_m_parameters),0);
+				list_prepend(&(parsed_msg.c_m_parameters),usr_2->ui_nick); 
+        	        	send_private_message_usr(usr, parsed_msg, serverHost,command,nick);
+			}
             	}
 	    }
 	    else{
@@ -379,24 +386,27 @@ void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHo
 	    }
 	}
 	else{ 
-            user_info *usr = (user_info*)malloc(sizeof(user_info)); 
+            user_info *usr_2 = (user_info*)malloc(sizeof(user_info)); 
             int i;
-            for(i=0;i<list_size(&chan->ci_users);i++){
-	        usr = (user_info *)list_get_at( &chan->ci_users, i);
-                param=strdup(usr->ui_nick);
-                send_private_message_usr(usr, parsed_msg, serverHost,command);
+            for(i=0;i<list_size(&chan->ci_users);i++){	        
+	        usr_2 = (user_info *)list_get_at( &chan->ci_users, i);
+		if(strcmp(usr_2->ui_nick,usr->ui_nick) !=0){
+			list_delete_at(&(parsed_msg.c_m_parameters),0);
+			list_prepend(&(parsed_msg.c_m_parameters),usr_2->ui_nick);            
+        	        send_private_message_usr(usr, parsed_msg, serverHost,command,nick);
+		}
             }
 	}	
     }
     else{
-        send_private_message_usr(usr, parsed_msg, serverHost,command);
+        send_private_message_usr(usr, parsed_msg, serverHost,command,nick);
     }
 }
 
-void send_private_message_usr(user_info *usr, cmd_message parsed_msg, char* serverHost,enum cmd_name command){
+void send_private_message_usr(user_info *usr, cmd_message parsed_msg, char* serverHost,enum cmd_name command, char* channel_name){
     user_info *receiver=NULL;
     printf("----------------------------------------------------------------\n");
-    printf("Inside send private message: NICK %s\n",
+    printf("Inside send private message usr: NICK %s\n",
            (char *)list_get_at( &parsed_msg.c_m_parameters, 0));
     receiver=list_find_nick(list_get_at( &parsed_msg.c_m_parameters, 0 ));
 
@@ -408,8 +418,8 @@ void send_private_message_usr(user_info *usr, cmd_message parsed_msg, char* serv
 			serverHost,
 			ERR_NOSUCHNICK, 
 			usr->ui_nick,
-			(char *) list_get_at( &parsed_msg.c_m_parameters, 0 ));
-	    printf("Message to be sent:\n%s\nTo socket %d\n",buffer,usr->ui_socket);
+			channel_name);
+	   // printf("Message to be sent:\n%s\nTo socket %d\n",buffer,usr->ui_socket);
             send_rpl( usr->ui_socket, buffer );
 	}
     }	
@@ -429,10 +439,10 @@ void send_private_message_usr(user_info *usr, cmd_message parsed_msg, char* serv
                 usr->ui_username,
                 usr->ui_hostname,
 		command_string,
-                (char*)list_get_at( &parsed_msg.c_m_parameters, 0 ),  
+                channel_name,  
                 (char*)list_get_at( &parsed_msg.c_m_parameters, 1 ));
-	 printf("Message to be sent:\n%s\nTo socket %d\n",buffer,receiver->ui_socket);
- 	 printf("msg:%s\nlenght=%d\n",(char*)list_get_at( &parsed_msg.c_m_parameters, 1 ),strlen((char*)list_get_at( &parsed_msg.c_m_parameters, 1 )));
+	 //printf("Message to be sent:\n%s\nTo socket %d\n",buffer,receiver->ui_socket);
+ 	 //printf("msg:%s\nlenght=%d\n",(char*)list_get_at( &parsed_msg.c_m_parameters, 1 ),strlen((char*)list_get_at( &parsed_msg.c_m_parameters, 1 )));
          send_rpl(receiver->ui_socket, buffer );
     }
     printf("---------------------------------------------------------------- \n");

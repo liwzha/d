@@ -45,7 +45,7 @@ void add_user_by_uname(char* username,char* full_username,user_info *usr, char* 
 void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHost,enum cmd_name command);
 
 // send private message in commands PRIVMSG and NOTICE
-void send_private_message_usr(user_info *usr, cmd_message parsed_msg, char* serverHost,enum cmd_name command);
+void send_private_message_usr(user_info *usr, cmd_message parsed_msg, char* serverHost,enum cmd_name command, char* channel_name);
 // send PONG in response to PING
 void send_pong(user_info *usr, char* serverHost);
 

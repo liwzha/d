@@ -81,16 +81,16 @@ bool is_channel_on_list(char* nick){
 }
 channel_info* find_channel_by_nick(char* nick){
     channel_info *chan = (channel_info*)malloc(sizeof(channel_info));
-    channel_info* p_chan = init_channel(nick);
+    //chan=NULL;
     int i;
     for(i=0;i<list_size(&channel_list);i++){
         chan = (channel_info *)list_get_at( &channel_list, i);
         if(strcmp(chan->ci_nick,nick)==0){
-            p_chan=chan;
-            break;
+            return chan;
         }
     }
-    return p_chan;
+    
+    return chan;
 }
 channel_info* init_channel(char* nick ){
     channel_info *chan = (channel_info*)malloc(sizeof(channel_info));
