@@ -364,9 +364,11 @@ void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHo
     list_t * param = &(parsed_msg.c_m_parameters);
     char* nick = list_get_at(param, 0);
     //check if the receiver is a channel or a user
+
     if( nick[0]=='#' || nick[0]=='!' || nick[0]=='&' || nick[0]=='+'){
 	channel_info *chan = find_channel_by_nick(nick); 
-	if( is_channel_empty (chan) || chan==NULL){
+	printf("\nNikita: chan-nick=%s",chan->ci_nick);
+	if(command==PRIVMSG && is_channel_empty (chan)){
 		char buffer [MAX_MSG_LEN];
 		snprintf ( buffer, sizeof(buffer),
 			":%s %s %s %s :No such nick/channel",
@@ -376,9 +378,11 @@ void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHo
 			nick);
                 send_rpl( usr->ui_socket, buffer );
 	}
-	else if( chan->moderateMode == 2 ){// moderate mode =m
-	    if( is_user_voice_user(chan, usr)){
-	    	user_info *usr_2 = (user_info*)malloc(sizeof(user_info)); 
+	else if(command==NOTICE  && is_channel_empty (chan)){
+		printf("Do Nothing");
+	}
+	else if( chan->moderateMode == 2 && is_user_voice_user(chan, usr)){// moderate mode =m
+		user_info *usr_2 = (user_info*)malloc(sizeof(user_info)); 
             	int i;
             	for(i=0;i<list_size(&chan->ci_users);i++){
 	        	usr_2 = (user_info *)list_get_at( &chan->ci_users, i);
@@ -388,13 +392,17 @@ void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHo
         	        	send_private_message_usr(usr, parsed_msg, serverHost,command,nick);
 			}
             	}
-	    }
-	    else{
-		char buffer [MAX_MSG_LEN];
-		sprintf(buffer,":%s %s", serverHost,  ERR_CANNOTSENDTOCHAN);
-                send_rpl( usr->ui_socket, buffer );
-	    }
 	}
+	else if (!is_user_on_channel(chan, usr) ){  
+		char buffer [MAX_MSG_LEN];
+        	sprintf(buffer,":%s %s %s %s :Cannot send to channel", 
+				serverHost,
+				ERR_CANNOTSENDTOCHAN,
+				usr->ui_nick,
+		  		chan->ci_nick);
+		printf("\nMessage to be sent:\n%s\nTo socket %d\n",buffer,usr->ui_socket);
+		send_rpl( usr->ui_socket, buffer );
+    	} 
 	else{ 
             user_info *usr_2 = (user_info*)malloc(sizeof(user_info)); 
             int i;
@@ -421,7 +429,7 @@ void send_private_message_usr(user_info *usr, cmd_message parsed_msg, char* serv
     receiver=list_find_nick(list_get_at( &parsed_msg.c_m_parameters, 0 ));
 
     if(isempty(receiver)|| !is_user_registered(usr) || !is_user_registered(receiver)){
-	if(command==PRIVMSG && command!=NOTICE){
+	if(command==PRIVMSG){
 	    char buffer [MAX_MSG_LEN];
             snprintf ( buffer, sizeof(buffer),
 			":%s %s %s %s :No such nick/channel",

@@ -12,7 +12,7 @@ void circulate_in_channel(channel_info* chan, char* message){
     }
 }
 bool is_channel_empty(channel_info* channel){
-    if(list_size(&channel->ci_users)==0)
+    if(list_size(&channel->ci_users)==0 || (channel==NULL))
         return 1;
     else
         return 0;
