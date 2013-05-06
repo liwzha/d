@@ -366,7 +366,17 @@ void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHo
     //check if the receiver is a channel or a user
     if( nick[0]=='#' || nick[0]=='!' || nick[0]=='&' || nick[0]=='+'){
 	channel_info *chan = find_channel_by_nick(nick); 
-	if( chan->moderateMode == 2 ){// moderate mode =m
+	if( is_channel_empty (chan) || chan==NULL){
+		char buffer [MAX_MSG_LEN];
+		snprintf ( buffer, sizeof(buffer),
+			":%s %s %s %s :No such nick/channel",
+			serverHost,
+			ERR_NOSUCHNICK, 
+			usr->ui_nick,
+			nick);
+                send_rpl( usr->ui_socket, buffer );
+	}
+	else if( chan->moderateMode == 2 ){// moderate mode =m
 	    if( is_user_voice_user(chan, usr)){
 	    	user_info *usr_2 = (user_info*)malloc(sizeof(user_info)); 
             	int i;
