@@ -140,8 +140,8 @@ void resp_to_cmd(user_info *usr, cmd_message parsed_msg, char* serverHost){
             break;
     	case TOPIC:
             rpl_topic(usr, &parsed_msg, serverHost);
-    	case OPER:
-            rpl_oper(usr, &parsed_msg, serverHost);
+    	//case OPER:
+        //    rpl_oper(usr, &parsed_msg, serverHost);
     	case MODE:
             rpl_mode(usr,&parsed_msg, serverHost);
     	case AWAY:
@@ -709,6 +709,14 @@ strcat(serverHost,"hostname\0"); //!!!!!!!!!!!!!!!!for debug!!!!!!!!!!!!!!!!!!!!
 void rpl_topic(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost)
 {
     list_t * param = &(p_parsed_msg->c_m_parameters);
+	printf("..................");
+    for(int i = 0; i < list_size(param);i++)
+    {
+//	printf("..................");
+        printf(list_get_at(param, i));
+//	printf("___________________");
+    }
+	printf("___________________");
     int userSock = sender_info->ui_socket;
     char * nick = sender_info->ui_nick;
     char * channelName = list_get_at(param, 0);
@@ -720,7 +728,7 @@ void rpl_topic(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHo
         send_rpl(userSock, out_buf);
         return;
     }
-    if(list_size(param) == 2)
+    if(list_size(param) == 1)
     {
         if(!channel->topicSet)
         {
@@ -748,20 +756,25 @@ void rpl_topic(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHo
         }
         else
         {
-            
-            char* newChannelName = list_get_at(param,2);
-            if(strlen(newChannelName) == 0)//Clear the Topic Name
+           printf("***Entering Here./n"); 
+            char* newTopicName = list_get_at(param,1);
+           
+	  printf("The number of strlen %d", strlen(newTopicName)); 
+	   if(strlen(newTopicName) == 0)//Clear the Topic Name
             {
                 channel->topicSet = 0;
                 channel->topic = "";
-                //Do we need to send any command?
-                return;
+                sprintf(out_buf,"%s %s %s %s :No topic is set", serverHost, RPL_NOTOPIC,nick, channelName);
+                send_rpl(userSock, out_buf);
+		return;
             }
             else
             {
                 channel->topicSet = 1;
-                channel->topic = newChannelName;
+                channel->topic = newTopicName;
+		sprintf(out_buf,"%s %s %s %s :%s", serverHost, RPL_TOPIC, nick, channelName,newTopicName );
                 //Do we need to send any command?
+		send_rpl(userSock, out_buf);
                 return;
             }
         }
@@ -786,6 +799,7 @@ void rpl_oper(user_info * sender_info, cmd_message * p_parsed_msg, char* serverH
     }
     else
     {
+	printf("Reach Here");
         sprintf(out_buf, "%s %s %s:Password incorrect",serverHost,ERR_PASSWDMISMATCH,nick);
         send_rpl(userSock, out_buf);
         return;
