@@ -24,9 +24,11 @@ bool is_user_on_channel( channel_info* channel, user_info* sender){
     for(i = 0; i < list_size( &channel->ci_users); i++){
         usr = (user_info *)list_get_at( &channel->ci_users, i);
         if(usr->ui_socket==sender->ui_socket){
+printf("is_user_on_channel:  about to return 1 ....\n");
             return 1;
         }
     }
+printf("is_user_on_channel:  about to return 0 ....\n");
     return 0;
 }
 bool is_user_voice_user( channel_info* channel, user_info* sender){
@@ -92,11 +94,22 @@ channel_info* find_channel_by_nick(char* nick){
     
     return chan;
 }
-channel_info* init_channel(char* nick ){
+channel_info* init_channel(char* nick, user_info * p_usr ){
+printf("inside init_channel\n");
     channel_info *chan = (channel_info*)malloc(sizeof(channel_info));
     chan->ci_nick = strdup(nick);
     chan->topicSet = 0;
     list_init(&chan->ci_users);
+    list_init(&chan->ci_voiceUsers);
+    list_init(&chan->ci_operatorUsers);
+    chan->moderateMode = 0;
+    chan->topicMode = 0;
+    chan->topic = strdup("");
+    if( p_usr != NULL ){
+//        list_append(&chan->ci_users, p_usr);
+        list_append(&chan->ci_operatorUsers, p_usr);
+    }
+printf("init_channel: about to return \n");
     return chan;
 }
 

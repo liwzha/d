@@ -276,9 +276,11 @@ void send_join(user_info* usr, cmd_message parsed_msg, char* serverHost){
         chan->ci_nick = strdup(channel_nick);
         chan->topicSet = 0;
         list_init(&chan->ci_users);
+        chan = init_channel(channel_nick,usr); // adding new line!!!!! debug!!!
 	list_append(&channel_list,chan);
     } 
     if( !is_user_on_channel (chan, usr)){
+printf("send_join:  if user not in list**************************\n");
     	list_append(&chan->ci_users, usr);
     	/*printf("\n\n-----------------------------------------------------\n");
     	printf("send_join: Number of channels in channel_list %d", list_size(&channel_list));    
@@ -801,7 +803,7 @@ void rpl_topic(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHo
 	//	newTopicName[0]="";	
                 channel->topicSet = 1;
                 channel->topic = newTopicName;
-		printf(newTopicName);
+		//printf(newTopicName);
 		sprintf(out_buf,":%s %s %s :%s", nick, TOPIC, channelName,newTopicName );
                 //Do we need to send any command?
                 circulate_in_channel(channel,out_buf);
@@ -843,7 +845,7 @@ void rpl_oper(user_info * sender_info, cmd_message * p_parsed_msg, char* serverH
 
 void rpl_mode(user_info * sender_info, cmd_message * p_parsed_msg, char* serverHost)
 {
-    printf("Entering Mode");
+    printf("Entering Mode\n");
     list_t * param = &(p_parsed_msg->c_m_parameters);
     int userSock = sender_info->ui_socket;
     char * nick = sender_info->ui_nick;
@@ -852,10 +854,10 @@ void rpl_mode(user_info * sender_info, cmd_message * p_parsed_msg, char* serverH
     char * name = list_get_at(param, 0);
 serverHost = malloc(sizeof(char)*10);
 strcat(serverHost,"hostname\0"); //!!!!!!!!!!!!!!!!for debug!!!!!!!!!!!!!!!!!!!!11 
-
+printf("before if\n");
     if(name[0]!='#' && name[0]!='&' && name[0]!='!' && name[0]!='+') // User Mode:----Weird Method to Determine whether it's a user mode or not.
     {
-	printf("Enter Here");
+	printf("Enter Here\n");
         if(strcmp(nick,name)!=0)
         {
             sprintf(out_buf, ":%s %s %s :Cannot change mode for other users",serverHost,ERR_USERSDONTMATCH,nick);
@@ -868,7 +870,7 @@ strcat(serverHost,"hostname\0"); //!!!!!!!!!!!!!!!!for debug!!!!!!!!!!!!!!!!!!!!
 	   printf("\nInteresting Part: %d\n",strcmp(list_get_at(param,1),"-o"));
            if(strcmp(list_get_at(param, 1),"-o")==0)
            {
-	       printf("Entering Hereeeeee");
+	       printf("Entering Hereeeeee\n");
                user_info * user = list_find_nick(nick);
                user->operatorMode = 0;
                sprintf(out_buf, ":%s %s %s :-o",nick,"MODE",nick);
@@ -878,7 +880,7 @@ strcat(serverHost,"hostname\0"); //!!!!!!!!!!!!!!!!for debug!!!!!!!!!!!!!!!!!!!!
 	   else if(strcmp(list_get_at(param,1),"+a")==0||strcmp(list_get_at(param,1),"-a")==0)
 		{
 
-		printf("Ignore");
+		printf("Ignore\n");
 		return;
 		}
 	   else if(strcmp(list_get_at(param,1),"+o")==0)
@@ -894,9 +896,10 @@ strcat(serverHost,"hostname\0"); //!!!!!!!!!!!!!!!!for debug!!!!!!!!!!!!!!!!!!!!
     
     else    //Channel Mode
     {
-	printf("Entering");
+	printf("Entering\n");
         if(list_size(param) == 1)//Channel Mode with one parameter
         {
+printf("channel mode with one parameter\n");
             if(!is_channel_on_list(name))
             {
                 sprintf(out_buf, ":%s %s %s %s :No such channel", serverHost,ERR_NOSUCHCHANNEL,nick,name);
@@ -935,17 +938,21 @@ strcat(serverHost,"hostname\0"); //!!!!!!!!!!!!!!!!for debug!!!!!!!!!!!!!!!!!!!!
         
         else if(list_size(param) == 2)//Channel Mode with two parameters;
         {
+printf("channel mode with two parameters\n");
             if(!is_channel_on_list(name))
             {
+printf("channel mode two param -- if not on list\n");
                 sprintf(out_buf, ":%s %s %s %s :No such channel",serverHost,ERR_NOSUCHCHANNEL,nick,name);
                 send_rpl(userSock, out_buf);
                 return;
             }
             else
             {
+printf("channel mode two param --  on list\n");
                 channel_info *channel = find_channel_by_nick(name);
                 char * modeString = list_get_at(param, 1);
                 //check priviledge
+printf("before check priviledge\n");
                 if(list_contains(&(channel->ci_operatorUsers),sender_info)||sender_info->operatorMode)
                 {
                     if(modeString[1]!='m' && modeString[1]!='t')//Unknown Mode
@@ -956,6 +963,7 @@ strcat(serverHost,"hostname\0"); //!!!!!!!!!!!!!!!!for debug!!!!!!!!!!!!!!!!!!!!
                     }
                     if(modeString[1] == 'm')
                     {
+printf("inside if modestring[1] == 'm'\n");
                         if(modeString[0] == '+')
                             channel->moderateMode = 1;
                         if(modeString[0] == '-')

@@ -42,6 +42,7 @@ printf("\n");
         //(*msg_offset)++;
         *buf_offset = 0;
     }
+printf("extract_message: about to return\n");
     return flag;
 }
 

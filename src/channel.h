@@ -31,7 +31,7 @@ bool is_user_operator_user( channel_info* channel, user_info* sender);
 char * all_users_channel( char* nick);
 bool is_channel_on_list(char* nick); // nick is the nick of the channel
 channel_info* find_channel_by_nick( char* nick);
-channel_info* init_channel( char* nick);
+channel_info* init_channel( char* nick, user_info *p_usr);
 
 
 list_t find_channel_of_user(char *nick);
