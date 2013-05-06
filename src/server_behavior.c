@@ -119,35 +119,34 @@ void resp_to_cmd(user_info *usr, cmd_message parsed_msg, char* serverHost){
 	case PONG:
  	    // DO NOTHING
             break;
-    case WHOIS:
+    	case WHOIS:
             rpl_whois(usr, &parsed_msg, serverHost);
             break;
-    case MOTD:
+    	case MOTD:
             rpl_motd(usr, &parsed_msg, serverHost);
             break;
-    case LUSERS:
+    	case LUSERS:
             printf("*******************case LUSERS *****************\n");
             rpl_lusers(usr, &parsed_msg, serverHost);
             break;
-	case QUIT:
+   	case QUIT:
             send_quit(usr, parsed_msg, serverHost);
             break;
-	case JOIN:
+    	case JOIN:
             send_join(usr, parsed_msg, serverHost);
 	    break;
-    case PART:
+    	case PART:
             send_part(usr, parsed_msg, serverHost);
             break;
-    case TOPIC:
+    	case TOPIC:
             rpl_topic(usr, &parsed_msg, serverHost);
-    case OPER:
+    	case OPER:
             rpl_oper(usr, &parsed_msg, serverHost);
-    case MODE:
+    	case MODE:
             rpl_mode(usr,&parsed_msg, serverHost);
-    case AWAY:
-            rpl_away(usr, &parsed_msg, serverHost);
-            
-    default:
+    	case AWAY:
+            rpl_away(usr, &parsed_msg, serverHost);            
+    	default:
             rpl_unknowcommand(usr, &parsed_msg, serverHost);
             break;
     }
@@ -277,49 +276,49 @@ void send_join(user_info* usr, cmd_message parsed_msg, char* serverHost){
     } 
     if( !is_user_on_channel (chan, usr)){
     	list_append(&chan->ci_users, usr);
-    }
-    printf("\n\n-----------------------------------------------------\n");
-    printf("send_join: Number of channels in channel_list %d", list_size(&channel_list));    
-    int i;
-    for(i=0;i<list_size(&channel_list);i++){
-        channel_info* print_chan = (channel_info *)list_get_at( &channel_list, i);
-	    //if(!is_channel_empty(print_chan)){
-		printf("\n:%s:%d",
-                print_chan->ci_nick,
-                list_size(&print_chan->ci_users));
-	    //}    
-    }
-    printf("\n-----------------------------------------------------\n");
-    sprintf(join_msg,":%s!%s@%s JOIN %s", 
-			usr->ui_nick
-   		      , usr->ui_username
-                      , usr->ui_hostname
-                      , channel_nick );
-    circulate_in_channel(chan,join_msg);
-    if(chan->topicSet){
-        sprintf(out_buf1,":%s %s %s %s :%s",
-	  		serverHost,
-			RPL_TOPIC,
-			usr->ui_nick,
-			channel_nick,
-			chan->topic);
-	send_rpl( usr->ui_socket, out_buf1);
-    }
-	//RPL_NAMREPLY
-    sprintf(out_buf2,":%s %s %s = %s :%s foobar2",
+    	printf("\n\n-----------------------------------------------------\n");
+    	printf("send_join: Number of channels in channel_list %d", list_size(&channel_list));    
+    	int i;
+    	for(i=0;i<list_size(&channel_list);i++){
+    	    channel_info* print_chan = (channel_info *)list_get_at( &channel_list, i);
+		    //if(!is_channel_empty(print_chan)){
+			printf("\n:%s:%d",
+    	            print_chan->ci_nick,
+    	            list_size(&print_chan->ci_users));
+		    //}    
+    	}
+    	printf("\n-----------------------------------------------------\n");
+    	sprintf(join_msg,":%s!%s@%s JOIN %s", 
+				usr->ui_nick
+   			      , usr->ui_username
+    	                  , usr->ui_hostname
+    	                  , channel_nick );
+    	circulate_in_channel(chan,join_msg);
+    	if(chan->topicSet){
+    	    sprintf(out_buf1,":%s %s %s %s :%s",
+		  		serverHost,
+				RPL_TOPIC,
+				usr->ui_nick,
+				channel_nick,
+				chan->topic);
+		send_rpl( usr->ui_socket, out_buf1);
+    	}
+		//RPL_NAMREPLY
+    	sprintf(out_buf2,":%s %s %s = %s :%s foobar2",
 			serverHost, 
 			RPL_NAMREPLY, 
 			usr->ui_nick,
-                        channel_nick,
-                        usr->ui_nick);
-    send_rpl( usr->ui_socket, out_buf2 );
-        // RPL_ENDOFNAMES    
-    sprintf(out_buf3,":%s %s %s %s :End of NAMES list", 
+    	                channel_nick,
+    	                usr->ui_nick);
+    	send_rpl( usr->ui_socket, out_buf2 );
+    	    // RPL_ENDOFNAMES    
+    	sprintf(out_buf3,":%s %s %s %s :End of NAMES list", 
 			serverHost,
 			RPL_ENDOFNAMES,
 		        usr->ui_nick,
                         channel_nick);
-    send_rpl( usr->ui_socket, out_buf3 );
+    	send_rpl( usr->ui_socket, out_buf3 );
+    }
 }
 
 // TO DO 
@@ -328,13 +327,19 @@ void send_part(user_info* usr, cmd_message parsed_msg, char* serverHost){
     list_t * param = &(parsed_msg.c_m_parameters);
     char* channel_nick = list_get_at(param, 0);
     channel_info* chan=find_channel_by_nick(channel_nick);
-    if(chan == NULL){
-        sprintf(buffer,":%s %s", serverHost
-                                ,  ERR_NOSUCHCHANNEL);
+    if(is_channel_empty(chan)){
+	sprintf(buffer,":%s %s %s %s :No such channel", 
+				serverHost,
+				ERR_NOSUCHCHANNEL,
+				usr->ui_nick,
+		  		chan->ci_nick);
     }
     else if (is_user_on_channel(chan, usr)){        
-        sprintf(buffer,":%s %s", serverHost
-                               , ERR_NOTONCHANNEL);
+        sprintf(buffer,":%s %s %s %s :You're not on that channel", 
+				serverHost,
+				ERR_NOTONCHANNEL,
+				usr->ui_nick,
+		  		chan->ci_nick);
     }
     else{
         list_delete(&chan->ci_users, usr);
@@ -354,7 +359,7 @@ void send_part(user_info* usr, cmd_message parsed_msg, char* serverHost){
 				  , channel_nick);
         }
         printf("Message to be sent:\n%s\nTo socket %d\n",buffer,usr->ui_socket);
-        circulate_in_channel(chan, buffer );// TO DO circulate
+        circulate_in_channel(chan, buffer );
         if(is_channel_empty(chan)){
 	    list_delete(&channel_list, chan);
         }
@@ -400,7 +405,7 @@ void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHo
 				ERR_CANNOTSENDTOCHAN,
 				usr->ui_nick,
 		  		chan->ci_nick);
-		printf("\nMessage to be sent:\n%s\nTo socket %d\n",buffer,usr->ui_socket);
+		//printf("\nMessage to be sent:\n%s\nTo socket %d\n",buffer,usr->ui_socket);
 		send_rpl( usr->ui_socket, buffer );
     	} 
 	else{ 
@@ -474,9 +479,6 @@ void send_pong(user_info *usr, char* serverHost){
     printf("Message to be sent:\n%s\nTo socket %d\n",buffer,usr->ui_socket);
     send_rpl(usr->ui_socket, buffer );
 }
-
-
-
 
 void rpl_whois(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost){
     list_t * param = &(p_parsed_msg->c_m_parameters);
