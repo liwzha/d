@@ -1,5 +1,7 @@
 #include "server_behavior.h"
-
+#include <cstring>
+#include <atlstr.h>
+#include <string.h>
 void close_clientSocket( int clientSocket ){
     close(clientSocket);
     exit(0);
@@ -95,6 +97,7 @@ printf("about to call recv..............\n");
 }
 
 void resp_to_cmd(user_info *usr, cmd_message parsed_msg, char* serverHost){
+	printf("Entering resp to cmd");
     switch ( parsed_msg.c_m_command) {
         case NICK:
             add_user_by_nick((char*)list_get_at( &parsed_msg.c_m_parameters, 0 ),
@@ -140,12 +143,16 @@ void resp_to_cmd(user_info *usr, cmd_message parsed_msg, char* serverHost){
             break;
     	case TOPIC:
             rpl_topic(usr, &parsed_msg, serverHost);
-    	//case OPER:
-        //    rpl_oper(usr, &parsed_msg, serverHost);
+            break;
+    	case OPER:
+            rpl_oper(usr, &parsed_msg, serverHost);
+            break;
     	case MODE:
             rpl_mode(usr,&parsed_msg, serverHost);
+            break;
     	case AWAY:
-            rpl_away(usr, &parsed_msg, serverHost);            
+            rpl_away(usr, &parsed_msg, serverHost);
+            break;
     	default:
             rpl_unknowcommand(usr, &parsed_msg, serverHost);
             break;
@@ -725,19 +732,17 @@ strcat(serverHost,"hostname\0"); //!!!!!!!!!!!!!!!!for debug!!!!!!!!!!!!!!!!!!!!
 void rpl_topic(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost)
 {
     list_t * param = &(p_parsed_msg->c_m_parameters);
-	printf("..................");
-    for(int i = 0; i < list_size(param);i++)
-    {
-//	printf("..................");
-        printf(list_get_at(param, i));
-//	printf("___________________");
-    }
-	printf("___________________");
     int userSock = sender_info->ui_socket;
     char * nick = sender_info->ui_nick;
     char * channelName = list_get_at(param, 0);
     char out_buf[MAX_MSG_LEN];
     channel_info *channel = find_channel_by_nick(channelName);
+    
+    serverHost = malloc(sizeof(char)*10);
+    strcat(serverHost,"hostname\0"); //!!!!!!!!!!!!!!!!for debug!!!!!!!!!!!!!!!!!!!!11 
+    
+    
+    
     if(!is_user_on_channel(find_channel_by_nick(channelName), sender_info))
     {
         sprintf(out_buf, ":%s %s %s %s :You're not on that channel", serverHost,ERR_NOTONCHANNEL,nick,channelName);
@@ -766,36 +771,51 @@ void rpl_topic(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHo
          */
         if(channel->topicMode == 1 && !list_contains(&(channel->ci_operatorUsers),sender_info) && sender_info->operatorMode != 1)
         {
-            sprintf(out_buf, "%s %s %s %s :You're not channel operator", serverHost, ERR_CHANOPRIVSNEEDED, nick, channelName);
+            sprintf(out_buf, ":%s %s %s %s :You're not channel operator", serverHost, ERR_CHANOPRIVSNEEDED, nick, channelName);
             send_rpl(userSock, out_buf);
             return;
         }
         else
         {
-           printf("***Entering Here./n"); 
+            printf("\n***Entering Here.\n");
             char* newTopicName = list_get_at(param,1);
-           
-	  printf("The number of strlen %d", strlen(newTopicName)); 
-	   if(strlen(newTopicName) == 0)//Clear the Topic Name
+//            CString str = newTopicName;    
+	char subbuff[MAX_MSG_LEN];
+	memcpy(subbuff,&newTopicName[1],strlen(newTopicName)-1);
+	subbuff[strlen(newTopicName)-1] = '\0';
+	puts(subbuff);
+	newTopicName = subbuff;	
+
+	printf("The number of strlen %d", strlen(newTopicName));
+        printf("\nbegin\n");
+	//printf((int)strlen(newTopicName) == 0);
+        if(newTopicName[0] == '\0')//Clear the Topic Name
             {
+		printf("I am Here1");
                 channel->topicSet = 0;
                 channel->topic = "";
-                sprintf(out_buf,"%s %s %s %s :No topic is set", serverHost, RPL_NOTOPIC,nick, channelName);
+                sprintf(out_buf,":%s %s %s %s :No topic is set", serverHost, RPL_NOTOPIC,nick, channelName);
                 send_rpl(userSock, out_buf);
-		return;
-            }
-            else
-            {
-                channel->topicSet = 1;
-                channel->topic = newTopicName;
-		sprintf(out_buf,"%s %s %s %s :%s", serverHost, RPL_TOPIC, nick, channelName,newTopicName );
-                //Do we need to send any command?
-		send_rpl(userSock, out_buf);
                 return;
             }
+         else
+            {
+		printf("I am Here");
+	//	newTopicName[0]="";	
+                channel->topicSet = 1;
+                channel->topic = newTopicName;
+		printf(newTopicName);
+		sprintf(out_buf,":%s %s %s :%s", nick, TOPIC, channelName,newTopicName );
+                //Do we need to send any command?
+                circulate_in_channel(channel,out_buf);
+		return;
+            }
+	
+	//printf("Here");
         }
     }
 }
+
 
 void rpl_oper(user_info * sender_info, cmd_message * p_parsed_msg, char* serverHost)
 {
@@ -804,19 +824,21 @@ void rpl_oper(user_info * sender_info, cmd_message * p_parsed_msg, char* serverH
     char * nick = sender_info->ui_nick;
     char * userPasswd = list_get_at(param, 1);
     char out_buf[MAX_MSG_LEN];
+    serverHost = malloc(sizeof(char)*10);
+    strcat(serverHost,"hostname\0"); //!!!!!!!!!!!!!!!!for debug!!!!!!!!!!!!!!!!!!!!11 
     
     if(strcmp(userPasswd, serverPasswd) == 0)
     {
         user_info *user = list_find_nick(nick);
         user->operatorMode = 1;
-        sprintf(out_buf, "%s %s %s:You are now an IRC operator",serverHost,RPL_YOUREOPER,nick);
+        sprintf(out_buf, ":%s %s %s :You are now an IRC operator",serverHost,RPL_YOUREOPER,nick);
         send_rpl(userSock, out_buf);
         return;
     }
     else
     {
 	printf("Reach Here");
-        sprintf(out_buf, "%s %s %s:Password incorrect",serverHost,ERR_PASSWDMISMATCH,nick);
+        sprintf(out_buf, ":%s %s %s :Password incorrect",serverHost,ERR_PASSWDMISMATCH,nick);
         send_rpl(userSock, out_buf);
         return;
     }
@@ -824,33 +846,49 @@ void rpl_oper(user_info * sender_info, cmd_message * p_parsed_msg, char* serverH
 
 void rpl_mode(user_info * sender_info, cmd_message * p_parsed_msg, char* serverHost)
 {
+    printf("Entering Mode");
     list_t * param = &(p_parsed_msg->c_m_parameters);
     int userSock = sender_info->ui_socket;
     char * nick = sender_info->ui_nick;
     char * userName = sender_info->ui_username;
     char out_buf[MAX_MSG_LEN];
     char * name = list_get_at(param, 0);
+serverHost = malloc(sizeof(char)*10);
+strcat(serverHost,"hostname\0"); //!!!!!!!!!!!!!!!!for debug!!!!!!!!!!!!!!!!!!!!11 
+
     if(name[0]!='#' && name[0]!='&' && name[0]!='!' && name[0]!='+') // User Mode:----Weird Method to Determine whether it's a user mode or not.
     {
+	printf("Enter Here");
         if(strcmp(nick,name)!=0)
         {
-            sprintf(out_buf, "%s %s %s:Cannot change mode for other users",serverHost,ERR_USERSDONTMATCH,nick);
+            sprintf(out_buf, ":%s %s %s :Cannot change mode for other users",serverHost,ERR_USERSDONTMATCH,nick);
             send_rpl(userSock, out_buf);
             return;
         }
         else
         {
-           if(strcmp(list_get_at(param, 1),"-o"))
+	   printf(list_get_at(param, 1));
+	   printf("\nInteresting Part: %d\n",strcmp(list_get_at(param,1),"-o"));
+           if(strcmp(list_get_at(param, 1),"-o")==0)
            {
+	       printf("Entering Hereeeeee");
                user_info * user = list_find_nick(nick);
                user->operatorMode = 0;
-               sprintf(out_buf, "%s :%s %s %s :-o",serverHost,nick,"MODE",nick);
+               sprintf(out_buf, ":%s %s %s :-o",nick,"MODE",nick);
                send_rpl(userSock, out_buf);
                return;
            }
+	   else if(strcmp(list_get_at(param,1),"+a")==0||strcmp(list_get_at(param,1),"-a")==0)
+		{
+
+		printf("Ignore");
+		return;
+		}
+	   else if(strcmp(list_get_at(param,1),"+o")==0)
+		return;
             else
             {
-                sprintf(out_buf, "%s %s %s:Unknown MODE flag", serverHost, ERR_UMODEUNKNOWNFLAG,nick);
+                sprintf(out_buf, ":%s %s %s :Unknown MODE flag", serverHost, ERR_UMODEUNKNOWNFLAG,nick);
                 send_rpl(userSock, out_buf);
                 return;
             }
@@ -859,11 +897,12 @@ void rpl_mode(user_info * sender_info, cmd_message * p_parsed_msg, char* serverH
     
     else    //Channel Mode
     {
+	printf("Entering");
         if(list_size(param) == 1)//Channel Mode with one parameter
         {
             if(!is_channel_on_list(name))
             {
-                sprintf(out_buf, "%s %s %s %s :No such channel", serverHost,ERR_NOSUCHCHANNEL,nick,name);
+                sprintf(out_buf, ":%s %s %s %s :No such channel", serverHost,ERR_NOSUCHCHANNEL,nick,name);
                 send_rpl(userSock, out_buf);
                 return;
             }
@@ -872,24 +911,28 @@ void rpl_mode(user_info * sender_info, cmd_message * p_parsed_msg, char* serverH
                 channel_info *channel = find_channel_by_nick(name);
                 if(channel->topicMode + channel->moderateMode == 2)
                 {
-                    sprintf(out_buf, "%s %s %s %s +%s %s",serverHost,RPL_CHANNELMODEIS,nick,name,"t","m");
+                    sprintf(out_buf, ":%s %s %s %s +%s %s",serverHost,RPL_CHANNELMODEIS,nick,name,"t","m");
                     send_rpl(userSock, out_buf);
                     return;
                 }
                 else if(channel->topicMode == 1)
                 {
-                    sprintf(out_buf, "%s %s %s %s +%s",serverHost,RPL_CHANNELMODEIS,nick,name,"t");
+                    sprintf(out_buf, ":%s %s %s %s +%s",serverHost,RPL_CHANNELMODEIS,nick,name,"t");
                     send_rpl(userSock, out_buf);
                     return;
                 }
                 else if(channel->moderateMode == 1)
                 {
-                    sprintf(out_buf, "%s %s %s %s +%s",serverHost,RPL_CHANNELMODEIS,nick,name,"m");
+                    sprintf(out_buf, ":%s %s %s %s +%s",serverHost,RPL_CHANNELMODEIS,nick,name,"m");
                     send_rpl(userSock, out_buf);
                     return;
                 }
-                    else // What if there's no mode?
-                        return;
+                 else // What if there's no mode?
+                {
+		    sprintf(out_buf, ":%s %s %s %s +%s",serverHost,RPL_CHANNELMODEIS,nick,name,"");
+                    send_rpl(userSock, out_buf);
+		    return;
+		}
             }
         }
         
@@ -897,7 +940,7 @@ void rpl_mode(user_info * sender_info, cmd_message * p_parsed_msg, char* serverH
         {
             if(!is_channel_on_list(name))
             {
-                sprintf(out_buf, "%s %s %s %s :No such channel",serverHost,ERR_NOSUCHCHANNEL,nick,name);
+                sprintf(out_buf, ":%s %s %s %s :No such channel",serverHost,ERR_NOSUCHCHANNEL,nick,name);
                 send_rpl(userSock, out_buf);
                 return;
             }
@@ -910,7 +953,7 @@ void rpl_mode(user_info * sender_info, cmd_message * p_parsed_msg, char* serverH
                 {
                     if(modeString[1]!='m' && modeString[1]!='t')//Unknown Mode
                     {
-                        sprintf(out_buf, "%s %s %s %c :is unknown mode char to me for %s", serverHost,ERR_UNKNOWNMODE,nick,modeString[1],name);
+                        sprintf(out_buf, ":%s %s %s %c :is unknown mode char to me for %s", serverHost,ERR_UNKNOWNMODE,nick,modeString[1],name);
                         send_rpl(userSock, out_buf);
                         return;
                     }
@@ -936,7 +979,7 @@ void rpl_mode(user_info * sender_info, cmd_message * p_parsed_msg, char* serverH
                 }
                 else
                 {
-                    sprintf(out_buf, "%s %s %s %s :You're not channel operator",serverHost,ERR_CHANOPRIVSNEEDED,nick,name);
+                    sprintf(out_buf, ":%s %s %s %s :You're not channel operator",serverHost,ERR_CHANOPRIVSNEEDED,nick,name);
                     send_rpl(userSock, out_buf);
                     return;
                 }
@@ -948,7 +991,7 @@ void rpl_mode(user_info * sender_info, cmd_message * p_parsed_msg, char* serverH
         {
             if(!is_channel_on_list(name))
             {
-                sprintf(out_buf, "%s %s %s %s :No such channel",serverHost,ERR_NOSUCHCHANNEL,nick,name);
+                sprintf(out_buf, ":%s %s %s %s :No such channel",serverHost,ERR_NOSUCHCHANNEL,nick,name);
                 send_rpl(userSock, out_buf);
                 return;
             }
@@ -958,19 +1001,19 @@ void rpl_mode(user_info * sender_info, cmd_message * p_parsed_msg, char* serverH
             //check priviledge
             if(!list_contains(&(channel->ci_operatorUsers),sender_info)&& !sender_info->operatorMode)
             {
-                sprintf(out_buf, "%s %s %s %s :You're not channel operator",serverHost,ERR_CHANOPRIVSNEEDED,nick,name);
+                sprintf(out_buf, ":%s %s %s %s :You're not channel operator",serverHost,ERR_CHANOPRIVSNEEDED,nick,name);
                 send_rpl(userSock, out_buf);
                 return;
             }
             else if(!is_user_on_channel(channel, list_find_nick(nickNameOfModifiedUser)))
             {
-                sprintf(out_buf, "%s %s %s %s %s :They aren't on that channel",serverHost,ERR_USERNOTINCHANNEL,nick,nickNameOfModifiedUser,name);
+                sprintf(out_buf, ":%s %s %s %s %s :They aren't on that channel",serverHost,ERR_USERNOTINCHANNEL,nick,nickNameOfModifiedUser,name);
                 send_rpl(userSock, out_buf);
                 return;
             }
             else if(modeString[1]!='o' && modeString[1]!='v')
             {
-                sprintf(out_buf, "%s %s %s %c :is unknown mode char to me for %s", serverHost,ERR_UNKNOWNMODE,nick,modeString[1],name);
+                sprintf(out_buf, ":%s %s %s %c :is unknown mode char to me for %s", serverHost,ERR_UNKNOWNMODE,nick,modeString[1],name);
                 send_rpl(userSock, out_buf);
                 return;
             }
@@ -1011,7 +1054,7 @@ void rpl_away(user_info * sender_info, cmd_message * p_parsed_msg, char* serverH
     {
         sender_info->awayMode = 0;
         sender_info->awayMessage = "";
-        sprintf(out_buf, "%s %s %s:You are no longer marked as being away",serverHost,RPL_NOWAWAY,nick);
+        sprintf(out_buf, ":%s %s %s :You are no longer marked as being away",serverHost,RPL_UNAWAY,nick);
         send_rpl(userSock, out_buf);
         return;
     }
@@ -1019,7 +1062,7 @@ void rpl_away(user_info * sender_info, cmd_message * p_parsed_msg, char* serverH
     {
         sender_info->awayMode = 1;
         sender_info->awayMessage = list_get_at(param, 0);
-        sprintf(out_buf, "%s %s %s:You have been marked as being away", serverHost, RPL_AWAY,nick);
+        sprintf(out_buf, ":%s %s %s :You have been marked as being away", serverHost,RPL_NOWAWAY,nick);
         send_rpl(userSock, out_buf);
         return;
     }

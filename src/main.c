@@ -284,8 +284,10 @@ printf("inside service_single_client\n");
         printf("returned from parse_message, about to call resp_to_cmd\n");
 
         pthread_mutex_lock(&lock);
+	printf("Inside the lock");
         resp_to_cmd(usr, parsed_msg,serverHost->h_name);
         pthread_mutex_unlock(&lock);
+	printf("Outside the lock");
     
     }
     
