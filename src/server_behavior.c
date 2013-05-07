@@ -473,14 +473,15 @@ void send_private_message_usr(user_info *usr, cmd_message parsed_msg, char* serv
 	}
     }	
     else if(strcmp(channel_name,receiver->ui_nick)==0 && receiver->awayMode == 1){
-	if(command==PRIVMSG)
-	sprintf(buffer, ":%s %s %s %s %s", 
+	if(command==PRIVMSG){
+	    sprintf(buffer, ":%s %s %s %s %s", 
 			serverHost ,
                         RPL_AWAY,
                         usr->ui_nick,
                         receiver->ui_nick,
                         receiver->awayMessage);
-        send_rpl(usr->ui_socket, buffer  );
+            send_rpl(usr->ui_socket, buffer  );
+	}
     }
     else{
 	char command_string [MAX_MSG_LEN];
