@@ -314,21 +314,9 @@ void send_join(user_info* usr, cmd_message parsed_msg, char* serverHost){
                     chan->topic);
             send_rpl( usr->ui_socket, out_buf1);
         }
-        //RPL_NAMREPLY
-        sprintf(out_buf2,":%s %s %s = %s :%s foobar2",
-                "localhost",
-                RPL_NAMREPLY,
-                usr->ui_nick,
-                channel_nick,
-                usr->ui_nick);
-        send_rpl( usr->ui_socket, out_buf2 );
-        // RPL_ENDOFNAMES
-        sprintf(out_buf3,":%s %s %s %s :End of NAMES list",
-                "localhost",
-                RPL_ENDOFNAMES,
-                usr->ui_nick,
-                channel_nick);
-        send_rpl( usr->ui_socket, out_buf3 );
+
+        rpl_names(usr, &parsed_msg, serverHost);
+
     }
 }
 
@@ -1171,6 +1159,13 @@ void rpl_away(user_info * sender_info, cmd_message * p_parsed_msg, char* serverH
 
 
 void rpl_names(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost){
+printf("---inside rpl_names ---\n");
+int q;
+for( q=0;q<list_size(&p_parsed_msg->c_m_parameters);q++ ){
+    printf("%s\n",list_get_at(&p_parsed_msg->c_m_parameters,q));
+
+}
+
    list_t loc_channel_list; // a local copy of a list of *channel_info whose info of current users will be sent back in response to the cmd NAMES
    list_init( &loc_channel_list );
    list_t * p_param = &(p_parsed_msg->c_m_parameters);
@@ -1182,7 +1177,9 @@ void rpl_names(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHo
    // construct the local copy
    if( list_size( p_param ) == 1 ){
       chan_nick = strdup(list_get_at( p_param, 0 ));
+printf("channel nick: %s  num of current channels: %d\n",chan_nick, list_size(&channel_list));
       pt_chan = find_channel_by_nick( chan_nick );
+printf("nick of found channel: %s\n",pt_chan->ci_nick);
       list_append( &loc_channel_list, pt_chan ); 
    }
    else{
@@ -1195,14 +1192,14 @@ void rpl_names(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHo
    for( i=0; i<list_size( &loc_channel_list ); i++ ){
      // construct info about the i-th channel
      pt_chan = list_get_at( &loc_channel_list,i );
-     sprintf(out_buf,":%s %s %s %s :", serverHost,RPL_NAMREPLY,sender_info->ui_nick, pt_chan->ci_nick);    
+     sprintf(out_buf,":%s %s %s = %s :", serverHost,RPL_NAMREPLY,sender_info->ui_nick, pt_chan->ci_nick);    
 
      // add nick in ci_users
      for( j=0; j< list_size(&(pt_chan->ci_users)); j++ ){
        pt_usr = list_get_at(&(pt_chan->ci_users),j);
-       if( list_locate( &(pt_chan->ci_voiceUsers),&pt_usr)>=0 )
+       if( list_locate( &(pt_chan->ci_voiceUsers),pt_usr)>=0 )
            sprintf(out_buf+strlen(out_buf),"+%s ", pt_usr->ui_nick);
-       if( list_locate( &(pt_chan->ci_voiceUsers),&pt_usr)>=0 )
+       else if( list_locate( &(pt_chan->ci_operatorUsers),pt_usr)>=0 )
            sprintf(out_buf+strlen(out_buf),"@%s ", pt_usr->ui_nick);
        else
            sprintf(out_buf+strlen(out_buf),"%s ", pt_usr->ui_nick);
@@ -1213,7 +1210,7 @@ void rpl_names(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHo
    }
    
    // send RPL_ENDOFNAMES
-   sprintf(out_buf,":%s %s %s :End of NAMES list", serverHost,RPL_ENDOFNAMES,sender_info->ui_nick);
+   sprintf(out_buf,":%s %s %s %s :End of NAMES list", serverHost,RPL_ENDOFNAMES,sender_info->ui_nick, pt_chan->ci_nick);
    send_rpl( sender_info->ui_socket, out_buf );
 }
 
