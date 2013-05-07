@@ -1279,7 +1279,7 @@ void rpl_list(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHos
    for( i=0; i<list_size( &loc_channel_list ); i++ ){
      // construct info about the i-th channel
      pt_chan = list_get_at( &loc_channel_list,i );
-     sprintf(out_buf,":%s %s %s %s %d :%s", serverHost,RPL_LIST,sender_info->ui_nick, pt_chan->ci_nick, list_size(&(pt_chan->ci_users)),pt_chan->topic);
+     sprintf(out_buf,":%s %s %s %s %d %s", serverHost,RPL_LIST,sender_info->ui_nick, pt_chan->ci_nick, list_size(&(pt_chan->ci_users)),pt_chan->topic);
      send_rpl( sender_info->ui_socket, out_buf );
    }   
    // send RPL_ENDOFLIST
