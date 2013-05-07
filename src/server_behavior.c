@@ -307,7 +307,7 @@ void send_join(user_info* usr, cmd_message parsed_msg, char* serverHost){
         circulate_in_channel(chan,join_msg);
         if(chan->topicSet){
             sprintf(out_buf1,":%s %s %s %s %s",
-                    serverHost,
+                    "localhost",
                     RPL_TOPIC,
                     usr->ui_nick,
                     channel_nick,
@@ -316,7 +316,7 @@ void send_join(user_info* usr, cmd_message parsed_msg, char* serverHost){
         }
         //RPL_NAMREPLY
         sprintf(out_buf2,":%s %s %s = %s :%s foobar2",
-                serverHost,
+                "localhost",
                 RPL_NAMREPLY,
                 usr->ui_nick,
                 channel_nick,
@@ -324,7 +324,7 @@ void send_join(user_info* usr, cmd_message parsed_msg, char* serverHost){
         send_rpl( usr->ui_socket, out_buf2 );
         // RPL_ENDOFNAMES
         sprintf(out_buf3,":%s %s %s %s :End of NAMES list",
-                serverHost,
+                "localhost",
                 RPL_ENDOFNAMES,
                 usr->ui_nick,
                 channel_nick);
@@ -975,9 +975,10 @@ printf("inside if modestring[0] == '+'\n");
                                 sprintf(out_buf, ":%s!%s@%s MODE %s %s",nick,sender_info->ui_username,sender_info->ui_hostname, name, "+m");
                                 printf("Still alive\n");    
 				send_rpl(usr->ui_socket, out_buf);
-				return;
                                 }
                             }
+				
+				return;
                         }
                         if(modeString[0] == '-')
                         {
@@ -988,9 +989,9 @@ printf("inside if modestring[0] == '+'\n");
                                 if(usr->awayMode != 1){
                                 sprintf(out_buf, ":%s!%s@%s MODE %s %s",nick,sender_info->ui_username,sender_info->ui_hostname, name, "-m");
                                     send_rpl(usr->ui_socket, out_buf);
-				return;
                                 }
                             }
+				return;
                         
                         }
                     }
@@ -1007,6 +1008,7 @@ printf("inside if modestring[0] == '+'\n");
                                     send_rpl(usr->ui_socket, out_buf);
                                 }
                             }
+				return;
                         }
                         if(modeString[0] == '-')
                         {
@@ -1019,6 +1021,7 @@ printf("inside if modestring[0] == '+'\n");
                                     send_rpl(usr->ui_socket, out_buf);
                                 }
                             }
+				return;
                         }
                     }
 
@@ -1080,6 +1083,7 @@ printf("inside if modestring[0] == '+'\n");
                                 send_rpl(usr->ui_socket, out_buf);
                             }
                         }
+				return;
                     }
                     if(modeString[1] == 'v')
                     {
@@ -1092,6 +1096,7 @@ printf("inside if modestring[0] == '+'\n");
                                 send_rpl(usr->ui_socket, out_buf);
                             }
                         }
+				return;
                     }
                 }
                 if(modeString[0] == '-')
@@ -1107,6 +1112,7 @@ printf("inside if modestring[0] == '+'\n");
                                 send_rpl(usr->ui_socket, out_buf);
                             }
                         }
+				return;
                     }
                     if(modeString[1] == 'v')
                     {
@@ -1119,6 +1125,7 @@ printf("inside if modestring[0] == '+'\n");
                                 send_rpl(usr->ui_socket, out_buf);
                             }
                         }
+				return;
                     }
                 }
             }
