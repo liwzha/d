@@ -455,6 +455,7 @@ void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHo
 
 void send_private_message_usr(user_info *usr, cmd_message parsed_msg, char* serverHost,enum cmd_name command, char* channel_name){
     user_info *receiver=NULL;
+    char buffer [MAX_MSG_LEN];
     printf("----------------------------------------------------------------\n");
     printf("Inside send private message usr: NICK %s\n",
            (char *)list_get_at( &parsed_msg.c_m_parameters, 0));
@@ -462,17 +463,25 @@ void send_private_message_usr(user_info *usr, cmd_message parsed_msg, char* serv
 
     if(isempty(receiver)|| !is_user_registered(usr) || !is_user_registered(receiver)){
 	if(command==PRIVMSG){
-	    char buffer [MAX_MSG_LEN];
-            snprintf ( buffer, sizeof(buffer),
+	    snprintf ( buffer, sizeof(buffer),
 			":%s %s %s %s :No such nick/channel",
 			serverHost,
 			ERR_NOSUCHNICK, 
 			usr->ui_nick,
 			channel_name);
-	   // printf("Message to be sent:\n%s\nTo socket %d\n",buffer,usr->ui_socket);
             send_rpl( usr->ui_socket, buffer );
 	}
     }	
+    else if(strcmp(channel_name,receiver->ui_nick)==0 && receiver->awayMode == 1){
+	if(command==PRIVMSG)
+	sprintf(buffer, ":%s %s %s %s %s", 
+			serverHost ,
+                        RPL_AWAY,
+                        usr->ui_nick,
+                        receiver->ui_nick,
+                        receiver->awayMessage);
+        send_rpl(usr->ui_socket, buffer  );
+    }
     else{
 	char command_string [MAX_MSG_LEN];
 	if(command == PRIVMSG)
@@ -482,20 +491,15 @@ void send_private_message_usr(user_info *usr, cmd_message parsed_msg, char* serv
 	else
 	    exit(1);
         printf("Nick found %s\n",receiver->ui_nick);
-        char buffer [MAX_MSG_LEN];
-        snprintf ( buffer, sizeof(buffer),
-                ":%s!%s@%s %s %s %s",
-                usr->ui_nick,
-                usr->ui_username,
-                usr->ui_hostname,
-		command_string,
-                channel_name,  
-                (char*)list_get_at( &parsed_msg.c_m_parameters, 1 ));
-	 //printf("Message to be sent:\n%s\nTo socket %d\n",buffer,receiver->ui_socket);
- 	 //printf("msg:%s\nlenght=%d\n",(char*)list_get_at( &parsed_msg.c_m_parameters, 1 ),strlen((char*)list_get_at( &parsed_msg.c_m_parameters, 1 )));
-         send_rpl(receiver->ui_socket, buffer );
+        sprintf ( buffer, ":%s!%s@%s %s %s %s",
+                	usr->ui_nick,
+                	usr->ui_username,
+                	usr->ui_hostname,
+			command_string,
+                	channel_name,  
+                	(char*)list_get_at( &parsed_msg.c_m_parameters, 1 ));
+        send_rpl(receiver->ui_socket, buffer );
     }
-    printf("---------------------------------------------------------------- \n");
 }
 
 void send_pong(user_info *usr, char* serverHost){
