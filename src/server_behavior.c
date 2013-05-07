@@ -266,8 +266,6 @@ printf("appended---------->>>current number of user:%d<<<-------------\n",list_s
 void send_join(user_info* usr, cmd_message parsed_msg, char* serverHost){
     char* channel_nick=strdup((char *)list_get_at( &parsed_msg.c_m_parameters, 0));
     channel_info* chan=find_channel_by_nick(channel_nick); // returns
-    
-    char *all_users=all_users_channel(channel_nick);
     char join_msg[MAX_MSG_LEN]; //JOINING MESSAGE
     char out_buf1[MAX_MSG_LEN]; //RPL TOPIC
     char out_buf2[MAX_MSG_LEN]; //RPL NAMREPLY
@@ -605,22 +603,56 @@ void rpl_unknowcommand(user_info* sender_info, cmd_message* p_parsed_msg, char* 
 }
 
 void send_quit(user_info* usr, cmd_message parsed_msg, char* serverHost){
+    int i;
     char buffer [MAX_MSG_LEN];
-    if(strlen((char *)list_get_at( &parsed_msg.c_m_parameters, 0))!=0){
+    list_t loc_channel_list = find_channel_of_user(usr->ui_nick);
+    channel_info *chan = (channel_info*)malloc(sizeof(channel_info));
+    /*
+    printf("\n-------------------Inside Quit ---------------\n");
+    for( i=0; i<list_size( &loc_channel_list ); i++ ){
+            chan = list_get_at( &loc_channel_list,i );
+	    printf("<%s>:%d:%d:%d \n",
+		    chan->ci_nick,
+		    list_size(&chan->ci_users),
+		    list_size(&chan->ci_voiceUsers),
+                    list_size(&chan->ci_operatorUsers));
+        }*/
+    if( list_size( &parsed_msg.c_m_parameters) != 0){	
+	printf("\nHere1");
     	snprintf ( buffer, sizeof(buffer),
-                "Closing Link: %s %s",
+                ":%s!%s@%s QUIT %s",
+                usr->ui_nick,
+                usr->ui_username,
                 usr->ui_hostname, 
-	        (char *)list_get_at( &parsed_msg.c_m_parameters, 0));
+	        (char *)list_get_at( &parsed_msg.c_m_parameters, 0));	
+    	for( i=0; i<list_size( &loc_channel_list ); i++ ){
+            chan = list_get_at( &loc_channel_list,i );
+	    circulate_in_channel(chan,buffer);
+        }	
     }
     else{
-    	snprintf ( buffer, sizeof(buffer),
-                "Closing Link: %s Client quit",
-                usr->ui_hostname);
+	printf("\nHere2");
+        snprintf ( buffer, sizeof(buffer),
+                ":%s!%s@%s QUIT :Closing Link",
+                usr->ui_nick,
+                usr->ui_username,
+                usr->ui_hostname);	
+    	for( i=0; i<list_size( &loc_channel_list ); i++ ){
+            chan = list_get_at( &loc_channel_list,i );
+	    circulate_in_channel(chan,buffer);
+        }
     }
     printf("Message to be sent:\n%s\nTo socket %d\n",buffer,usr->ui_socket);
-    send_rpl(usr->ui_socket, buffer );
-    list_delete(&user_list, usr);
+    send_rpl(usr->ui_socket, buffer );        
+    for( i=0; i<list_size( &loc_channel_list ); i++ ){
+        chan = list_get_at( &loc_channel_list,i );
+	list_delete(&chan->ci_users, usr);
+    	list_delete(&chan->ci_voiceUsers, usr);
+    	list_delete(&chan->ci_operatorUsers, usr);
+    }
+    list_delete(&user_list, usr);    
     connectionCounter--;
+    printf("\n-------------------Quit End ---------------\n");
 }
 
 
