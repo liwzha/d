@@ -916,7 +916,7 @@ printf("channel mode with one parameter\n");
                 channel_info *channel = find_channel_by_nick(name);
                 if(channel->topicMode + channel->moderateMode == 2)
                 {
-                    sprintf(out_buf, ":%s %s %s %s +%s %s",serverHost,RPL_CHANNELMODEIS,nick,name,"t","m");
+                    sprintf(out_buf, ":%s %s %s %s +%s%s",serverHost,RPL_CHANNELMODEIS,nick,name,"m","t");
                     send_rpl(userSock, out_buf);
                     return;
                 }
