@@ -264,66 +264,71 @@ printf("appended---------->>>current number of user:%d<<<-------------\n",list_s
     printf("\n-----------------------------------------------------\n");*/
 }
 void send_join(user_info* usr, cmd_message parsed_msg, char* serverHost){
-    char* channel_nick=strdup((char *)list_get_at( &parsed_msg.c_m_parameters, 0));   
+    char* channel_nick=strdup((char *)list_get_at( &parsed_msg.c_m_parameters, 0));
     channel_info* chan=find_channel_by_nick(channel_nick); // returns
     
-    char *all_users=all_users_channel(channel_nick); 
-    char join_msg[MAX_MSG_LEN]; //JOINING MESSAGE 
+    char *all_users=all_users_channel(channel_nick);
+    char join_msg[MAX_MSG_LEN]; //JOINING MESSAGE
     char out_buf1[MAX_MSG_LEN]; //RPL TOPIC
-    char out_buf2[MAX_MSG_LEN]; //RPL NAMREPLY   
-    char out_buf3[MAX_MSG_LEN]; //PRL_ENDOFNAMES     
+    char out_buf2[MAX_MSG_LEN]; //RPL NAMREPLY
+    char out_buf3[MAX_MSG_LEN]; //PRL_ENDOFNAMES
     if( is_channel_empty (chan)){
         chan->ci_nick = strdup(channel_nick);
         chan->topicSet = 0;
         list_init(&chan->ci_users);
-        chan = init_channel(channel_nick,usr); // adding new line!!!!! debug!!!
-	list_append(&channel_list,chan);
-    } 
+        list_init(&chan->ci_voiceUsers);
+        list_init(&chan->ci_operatorUsers);
+        list_append(&channel_list,chan);
+    }
     if( !is_user_on_channel (chan, usr)){
-printf("send_join:  if user not in list**************************\n");
-    	list_append(&chan->ci_users, usr);
-    	/*printf("\n\n-----------------------------------------------------\n");
-    	printf("send_join: Number of channels in channel_list %d", list_size(&channel_list));    
-    	int i;
-    	for(i=0;i<list_size(&channel_list);i++){
-    	    channel_info* print_chan = (channel_info *)list_get_at( &channel_list, i);
-		    //if(!is_channel_empty(print_chan)){
-			printf("\n:%s:%d",
-    	            print_chan->ci_nick,
-    	            list_size(&print_chan->ci_users));
-		    //}    
-    	}
-    	printf("\n-----------------------------------------------------\n");*/
-    	sprintf(join_msg,":%s!%s@%s JOIN %s", 
-				usr->ui_nick
-   			      , usr->ui_username
-    	                  , usr->ui_hostname
-    	                  , channel_nick );
-    	circulate_in_channel(chan,join_msg);
-    	if(chan->topicSet){
-    	    sprintf(out_buf1,":%s %s %s %s :%s",
-		  		serverHost,
-				RPL_TOPIC,
-				usr->ui_nick,
-				channel_nick,
-				chan->topic);
-		send_rpl( usr->ui_socket, out_buf1);
-    	}
-		//RPL_NAMREPLY
-    	sprintf(out_buf2,":%s %s %s = %s :%s foobar2",
-			serverHost, 
-			RPL_NAMREPLY, 
-			usr->ui_nick,
-    	                channel_nick,
-    	                usr->ui_nick);
-    	send_rpl( usr->ui_socket, out_buf2 );
-    	    // RPL_ENDOFNAMES    
-    	sprintf(out_buf3,":%s %s %s %s :End of NAMES list", 
-			serverHost,
-			RPL_ENDOFNAMES,
-		        usr->ui_nick,
-                        channel_nick);
-    	send_rpl( usr->ui_socket, out_buf3 );
+        if(list_size(&chan->ci_users)==0){ // 1st user should be operator
+            list_append(&chan->ci_operatorUsers, usr);
+        }
+        list_append(&chan->ci_users, usr);
+        printf("\n\n-----------------------------------------------------\n");
+        printf("send_join: Number of channels in channel_list %d", list_size(&channel_list));
+        int i;
+        for(i=0;i<list_size(&channel_list);i++){
+            channel_info* print_chan = (channel_info *)list_get_at( &channel_list, i);
+            if(!is_channel_empty(print_chan)){
+                printf("\n:%s:%d:%d:%d",
+                       print_chan->ci_nick,
+                       list_size(&print_chan->ci_users),
+                       list_size(&print_chan->ci_voiceUsers),
+                       list_size(&print_chan->ci_operatorUsers));
+            }
+        }
+        printf("\n-----------------------------------------------------\n");
+        sprintf(join_msg,":%s!%s@%s JOIN %s",
+                usr->ui_nick
+                , usr->ui_username
+                , usr->ui_hostname
+                , channel_nick );
+        circulate_in_channel(chan,join_msg);
+        if(chan->topicSet){
+            sprintf(out_buf1,":%s %s %s %s :%s",
+                    serverHost,
+                    RPL_TOPIC,
+                    usr->ui_nick,
+                    channel_nick,
+                    chan->topic);
+            send_rpl( usr->ui_socket, out_buf1);
+        }
+        //RPL_NAMREPLY
+        sprintf(out_buf2,":%s %s %s = %s :%s foobar2",
+                serverHost,
+                RPL_NAMREPLY,
+                usr->ui_nick,
+                channel_nick,
+                usr->ui_nick);
+        send_rpl( usr->ui_socket, out_buf2 );
+        // RPL_ENDOFNAMES
+        sprintf(out_buf3,":%s %s %s %s :End of NAMES list",
+                serverHost,
+                RPL_ENDOFNAMES,
+                usr->ui_nick,
+                channel_nick);
+        send_rpl( usr->ui_socket, out_buf3 );
     }
 }
 
@@ -961,26 +966,73 @@ printf("before check priviledge\n");
                         send_rpl(userSock, out_buf);
                         return;
                     }
+                    int i;
+
+                    
                     if(modeString[1] == 'm')
                     {
 printf("inside if modestring[1] == 'm'\n");
                         if(modeString[0] == '+')
+                        {
+printf("inside if modestring[0] == '+'\n");
                             channel->moderateMode = 1;
+                            user_info *usr = (user_info*)malloc(sizeof(user_info));
+                            for(i=0;i<list_size(&channel->ci_users);i++){
+                                usr = (user_info *)list_get_at( &channel->ci_users, i);
+                                if(usr->awayMode != 1){
+				printf("begin to send msg\n");
+                                printf(":%s %s %s %s %s\n",serverHost,RPL_CHANNELMODEIS,usr->ui_nick,name,"+m");
+                                sprintf(out_buf, ":%s!%s@%s MODE %s %s",nick,sender_info->ui_username,sender_info->ui_hostname, name, "+m");
+                                printf("Still alive\n");    
+				send_rpl(usr->ui_socket, out_buf);
+				return;
+                                }
+                            }
+                        }
                         if(modeString[0] == '-')
+                        {
                             channel->moderateMode = 0;
+                            user_info *usr = (user_info*)malloc(sizeof(user_info));
+                            for(i=0;i<list_size(&channel->ci_users);i++){
+                                usr = (user_info *)list_get_at( &channel->ci_users, i);
+                                if(usr->awayMode != 1){
+                                sprintf(out_buf, ":%s!%s@%s MODE %s %s",nick,sender_info->ui_username,sender_info->ui_hostname, name, "-m");
+                                    send_rpl(usr->ui_socket, out_buf);
+				return;
+                                }
+                            }
+                        
+                        }
                     }
                     if(modeString[1] == 't')
                     {
                         if(modeString[0] == '+')
+                        {
                             channel->topicMode = 1;
+                            user_info *usr = (user_info*)malloc(sizeof(user_info));
+                            for(i=0;i<list_size(&channel->ci_users);i++){
+                                usr = (user_info *)list_get_at( &channel->ci_users, i);
+                                if(usr->awayMode != 1){
+                                sprintf(out_buf, ":%s!%s@%s MODE %s %s",nick,sender_info->ui_username,sender_info->ui_hostname, name, "+t");
+                                    send_rpl(usr->ui_socket, out_buf);
+                                }
+                            }
+                        }
                         if(modeString[0] == '-')
+                        {
                             channel->topicMode = 0;
+                            user_info *usr = (user_info*)malloc(sizeof(user_info));
+                            for(i=0;i<list_size(&channel->ci_users);i++){
+                                usr = (user_info *)list_get_at( &channel->ci_users, i);
+                                if(usr->awayMode != 1){
+                                sprintf(out_buf, ":%s!%s@%s MODE %s %s",nick,sender_info->ui_username,sender_info->ui_hostname, name, "-t");
+                                    send_rpl(usr->ui_socket, out_buf);
+                                }
+                            }
+                        }
                     }
-                    /**********************************
-                     TODO: Send Message to the user and All the Users in the channel;
-                     
-                     
-                     ************************************/
+
+
                 }
                 else
                 {
@@ -1024,23 +1076,61 @@ printf("inside if modestring[1] == 'm'\n");
             }
             else
             {
+                int i;
                 if(modeString[0] == '+')
                 {
                     if(modeString[1] == 'o')
+                    {
                         list_append(&(channel->ci_operatorUsers),list_find_nick(nickNameOfModifiedUser));
+                        user_info *usr = (user_info*)malloc(sizeof(user_info));
+                        for(i=0;i<list_size(&channel->ci_users);i++){
+                            usr = (user_info *)list_get_at( &channel->ci_users, i);
+                            if(usr->awayMode != 1){
+                                sprintf(out_buf, ":%s!%s@%s MODE %s %s %s",nick,sender_info->ui_username,sender_info->ui_hostname, name, "+o",nickNameOfModifiedUser);
+                                send_rpl(usr->ui_socket, out_buf);
+                            }
+                        }
+                    }
                     if(modeString[1] == 'v')
+                    {
                         list_append(&(channel->ci_voiceUsers), list_find_nick(nickNameOfModifiedUser));
+                        user_info *usr = (user_info*)malloc(sizeof(user_info));
+                        for(i=0;i<list_size(&channel->ci_users);i++){
+                            usr = (user_info *)list_get_at( &channel->ci_users, i);
+                            if(usr->awayMode != 1){
+                                sprintf(out_buf, ":%s!%s@%s MODE %s %s %s",nick,sender_info->ui_username,sender_info->ui_hostname, name, "+v",nickNameOfModifiedUser);
+                                send_rpl(usr->ui_socket, out_buf);
+                            }
+                        }
+                    }
                 }
                 if(modeString[0] == '-')
                 {
                     if(modeString[1] == 'o')
+                    {
                         list_delete(&(channel->ci_operatorUsers), list_find_nick(nickNameOfModifiedUser));
+                        user_info *usr = (user_info*)malloc(sizeof(user_info));
+                        for(i=0;i<list_size(&channel->ci_users);i++){
+                            usr = (user_info *)list_get_at( &channel->ci_users, i);
+                            if(usr->awayMode != 1){
+                                sprintf(out_buf, ":%s!%s@%s MODE %s %s %s",nick,sender_info->ui_username,sender_info->ui_hostname, name, "-o",nickNameOfModifiedUser);
+                                send_rpl(usr->ui_socket, out_buf);
+                            }
+                        }
+                    }
                     if(modeString[1] == 'v')
+                    {
                         list_delete(&(channel->ci_voiceUsers), list_find_nick(nickNameOfModifiedUser));
+                        user_info *usr = (user_info*)malloc(sizeof(user_info));
+                        for(i=0;i<list_size(&channel->ci_users);i++){
+                            usr = (user_info *)list_get_at( &channel->ci_users, i);
+                            if(usr->awayMode != 1){
+                                sprintf(out_buf, ":%s!%s@%s MODE %s %s %s",nick,sender_info->ui_username,sender_info->ui_hostname, name, "-v",nickNameOfModifiedUser);
+                                send_rpl(usr->ui_socket, out_buf);
+                            }
+                        }
+                    }
                 }
-                /*********************
-                 TODO: Send reply to the User and all user in that channel;
-                 *********************/
             }
         }
         
