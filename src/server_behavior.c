@@ -150,6 +150,15 @@ void resp_to_cmd(user_info *usr, cmd_message parsed_msg, char* serverHost){
     	case AWAY:
             rpl_away(usr, &parsed_msg, serverHost);
             break;
+        case LIST:
+            rpl_list(usr, &parsed_msg, serverHost);
+            break;
+        case NAMES:
+            rpl_names(usr, &parsed_msg, serverHost);
+            break;
+        //case WHO:
+          //  send_rpl_whoreply(usr, &parsed_msg, serverHost);
+            //break;
     	default:
             rpl_unknowcommand(usr, &parsed_msg, serverHost);
             break;
@@ -618,7 +627,7 @@ void send_quit(user_info* usr, cmd_message parsed_msg, char* serverHost){
                     list_size(&chan->ci_operatorUsers));
         }*/
     if( list_size( &parsed_msg.c_m_parameters) != 0){	
-	printf("\nHere1");
+	//printf("\nHere1");
     	snprintf ( buffer, sizeof(buffer),
                 ":%s!%s@%s QUIT %s",
                 usr->ui_nick,
@@ -631,7 +640,7 @@ void send_quit(user_info* usr, cmd_message parsed_msg, char* serverHost){
         }	
     }
     else{
-	printf("\nHere2");
+	//printf("\nHere2");
         snprintf ( buffer, sizeof(buffer),
                 ":%s!%s@%s QUIT :Closing Link",
                 usr->ui_nick,
@@ -642,7 +651,7 @@ void send_quit(user_info* usr, cmd_message parsed_msg, char* serverHost){
 	    circulate_in_channel(chan,buffer);
         }
     }
-    printf("Message to be sent:\n%s\nTo socket %d\n",buffer,usr->ui_socket);
+    //printf("Message to be sent:\n%s\nTo socket %d\n",buffer,usr->ui_socket);
     send_rpl(usr->ui_socket, buffer );        
     for( i=0; i<list_size( &loc_channel_list ); i++ ){
         chan = list_get_at( &loc_channel_list,i );
@@ -652,7 +661,7 @@ void send_quit(user_info* usr, cmd_message parsed_msg, char* serverHost){
     }
     list_delete(&user_list, usr);    
     connectionCounter--;
-    printf("\n-------------------Quit End ---------------\n");
+    //printf("\n-------------------Quit End ---------------\n");
 }
 
 
@@ -1191,12 +1200,11 @@ void rpl_away(user_info * sender_info, cmd_message * p_parsed_msg, char* serverH
 
 
 void rpl_names(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHost){
-printf("---inside rpl_names ---\n");
-int q;
-for( q=0;q<list_size(&p_parsed_msg->c_m_parameters);q++ ){
-    printf("%s\n",list_get_at(&p_parsed_msg->c_m_parameters,q));
-
-}
+    printf("---inside rpl_names ---\n");
+    int q;
+    for( q=0;q<list_size(&p_parsed_msg->c_m_parameters);q++ ){
+        printf("%s\n",list_get_at(&p_parsed_msg->c_m_parameters,q));
+    }
 
    list_t loc_channel_list; // a local copy of a list of *channel_info whose info of current users will be sent back in response to the cmd NAMES
    list_init( &loc_channel_list );
@@ -1273,8 +1281,7 @@ void rpl_list(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHos
      pt_chan = list_get_at( &loc_channel_list,i );
      sprintf(out_buf,":%s %s %s %s %d :%s", serverHost,RPL_LIST,sender_info->ui_nick, pt_chan->ci_nick, list_size(&(pt_chan->ci_users)),pt_chan->topic);
      send_rpl( sender_info->ui_socket, out_buf );
-   }
-   
+   }   
    // send RPL_ENDOFLIST
    sprintf(out_buf,":%s %s %s :End of LIST", serverHost,RPL_LISTEND,sender_info->ui_nick);
    send_rpl( sender_info->ui_socket, out_buf );

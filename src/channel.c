@@ -53,20 +53,6 @@ bool is_user_operator_user( channel_info* channel, user_info* sender){
     }
     return 0;
 }
-char * all_users_channel(char* nick){
-    channel_info *chan = find_channel_by_nick(nick);
-    user_info *usr = (user_info*)malloc(sizeof(user_info));
-    char buffer[MAX_MSG_LEN];
-    int i;
-    int cx=0;
-    for(i=0;i<list_size(&chan->ci_users);i++){
-        usr = (user_info *)list_get_at(& chan->ci_users, i);
-        cx = snprintf ( buffer + cx, MAX_MSG_LEN -cx, "%s ", usr->ui_nick);
-    }
-    buffer[strlen(buffer)-1]='\0';
-    char *all_users=strdup(buffer);
-    return all_users;
-}
 
 bool is_channel_on_list(char* nick){
     int find = 0;
@@ -139,7 +125,7 @@ list_t find_channel_of_user(char *nick){
    for( i=0; i<list_size(&channel_list); i++ ){
      pt_chan = list_get_at(&channel_list, i);
      if( is_user_on_channel( pt_chan, pt_usr ) )
-        list_append(&loc_channel, pt_usr);
+        list_append(&loc_channel, pt_chan);
    }
    return loc_channel;
 }
