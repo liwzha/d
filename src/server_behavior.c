@@ -306,7 +306,7 @@ void send_join(user_info* usr, cmd_message parsed_msg, char* serverHost){
                 , channel_nick );
         circulate_in_channel(chan,join_msg);
         if(chan->topicSet){
-            sprintf(out_buf1,":%s %s %s %s :%s",
+            sprintf(out_buf1,":%s %s %s %s %s",
                     serverHost,
                     RPL_TOPIC,
                     usr->ui_nick,
@@ -740,84 +740,74 @@ void rpl_topic(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHo
     char * nick = sender_info->ui_nick;
     char * channelName = list_get_at(param, 0);
     char out_buf[MAX_MSG_LEN];
-    channel_info *channel = find_channel_by_nick(channelName);
-    
-    serverHost = malloc(sizeof(char)*10);
-    strcat(serverHost,"hostname\0"); //!!!!!!!!!!!!!!!!for debug!!!!!!!!!!!!!!!!!!!!11 
-    
-    
-    
-    if(!is_user_on_channel(find_channel_by_nick(channelName), sender_info))
-    {
-        sprintf(out_buf, ":%s %s %s %s :You're not on that channel", serverHost,ERR_NOTONCHANNEL,nick,channelName);
+    channel_info *channel = find_channel_by_nick(channelName);    
+    if(!is_user_on_channel(find_channel_by_nick(channelName), sender_info))    {
+        printf("\n*1*\n");
+        sprintf(out_buf, ":%s %s %s %s :You're not on that channel", 
+			serverHost,
+			ERR_NOTONCHANNEL,
+			nick,
+	                channelName);
         send_rpl(userSock, out_buf);
-        return;
     }
-    if(list_size(param) == 1)
-    {
-        if(!channel->topicSet)
-        {
-            sprintf(out_buf,":%s %s %s %s :No topic is set", serverHost, RPL_NOTOPIC,nick,channelName);
+    else if(list_size(param) <= 1)    { // check if the user is setting the topic or asking for the topic
+        if(!(channel->topicSet))  {
+	     printf("\n*2*\n");
+            sprintf(out_buf,":%s %s %s %s :No topic is set", 
+				serverHost, 
+				RPL_NOTOPIC,
+				nick,
+				channelName);
             send_rpl(userSock, out_buf);
             return;
         }
-        else
-        {
-            sprintf(out_buf,":%s %s %s %s :%s",serverHost,RPL_TOPIC,nick,channelName,channel->topic);
+        else     {
+            sprintf(out_buf,":%s %s %s %s %s",
+				serverHost,
+				RPL_TOPIC,
+				nick,
+				channelName,
+				channel->topic);
             send_rpl(userSock,out_buf);
             return;
         }
     }
-    else
-    {
-        /*
-         Check priviledge;
-         */
-        if(channel->topicMode == 1 && !list_contains(&(channel->ci_operatorUsers),sender_info) && sender_info->operatorMode != 1)
-        {
-            sprintf(out_buf, ":%s %s %s %s :You're not channel operator", serverHost, ERR_CHANOPRIVSNEEDED, nick, channelName);
-            send_rpl(userSock, out_buf);
-            return;
-        }
-        else
-        {
-            printf("\n***Entering Here.\n");
-            char* newTopicName = list_get_at(param,1);
-//            CString str = newTopicName;    
-	char subbuff[MAX_MSG_LEN];
-	memcpy(subbuff,&newTopicName[1],strlen(newTopicName)-1);
-	subbuff[strlen(newTopicName)-1] = '\0';
-	puts(subbuff);
-	newTopicName = subbuff;	
-
-	printf("The number of strlen %d", strlen(newTopicName));
-        printf("\nbegin\n");
-	//printf((int)strlen(newTopicName) == 0);
-        if(newTopicName[0] == '\0')//Clear the Topic Name
-            {
-		printf("I am Here1");
+    else if(channel->topicMode == 1 && !list_contains(&(channel->ci_operatorUsers),sender_info) && sender_info->operatorMode != 1){
+        sprintf(out_buf, ":%s %s %s %s :You're not channel operator", 
+			  serverHost, 
+			  ERR_CHANOPRIVSNEEDED, 
+			  nick, 
+		          channelName);
+        send_rpl(userSock, out_buf);
+        return;
+    }
+    else { // Finally, topic has to be set 
+        if(strlen(list_get_at(param,1)) == 0){//Clear the Topic Name
+		printf("\nTopic cleared\n");
                 channel->topicSet = 0;
                 channel->topic = "";
-                sprintf(out_buf,":%s %s %s %s :No topic is set", serverHost, RPL_NOTOPIC,nick, channelName);
-                send_rpl(userSock, out_buf);
-                return;
-            }
-         else
-            {
-		printf("I am Here");
-	//	newTopicName[0]="";	
+                sprintf(out_buf,":%s %s %s %s :No topic is set", 
+				serverHost, 
+				RPL_NOTOPIC,
+				nick, 
+				channelName);
+                send_rpl(userSock, out_buf); // TO DO: Notify all users
+         }
+         else {
+                //printf("New Topic 2\n");	
                 channel->topicSet = 1;
-                channel->topic = newTopicName;
-		//printf(newTopicName);
-		sprintf(out_buf,":%s %s %s :%s", nick, TOPIC, channelName,newTopicName );
-                //Do we need to send any command?
+                channel->topic= strdup(list_get_at(param,1));
+		//printf("Here\n");
+		sprintf(out_buf,":%s!%s@%s TOPIC %s %s",
+                		sender_info->ui_nick,
+                		sender_info->ui_username,
+                		sender_info->ui_hostname,
+				channelName,
+				channel->topic);
+		printf("Message to be sent: \n%s\n",out_buf);
                 circulate_in_channel(channel,out_buf);
-		return;
-            }
-	
-	//printf("Here");
-        }
-    }
+         }
+     }
 }
 
 
