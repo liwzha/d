@@ -408,7 +408,7 @@ void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHo
 	else if(command==NOTICE  && is_channel_empty (chan)){
 		printf("Do Nothing");
 	}
-	else if( chan->moderateMode == 2 && is_user_voice_user(chan, usr)){// moderate mode =m
+	else if( chan->moderateMode == 1 && is_user_voice_user(chan, usr)){// moderate mode =m
 		user_info *usr_2 = (user_info*)malloc(sizeof(user_info)); 
             	int i;
             	for(i=0;i<list_size(&chan->ci_users);i++){
@@ -420,7 +420,22 @@ void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHo
 			}
             	}
 	}
-	else if (!is_user_on_channel(chan, usr) ){  
+	else if( chan->moderateMode == 1 &&  !is_user_voice_user(chan, usr)){// moderate mode =m
+            if(command==PRIVMSG){ 
+               // user_info *usr_2 = (user_info*)malloc(sizeof(user_info));
+                char buffer[MAX_MSG_LEN];
+		sprintf(buffer,":%s %s %s %s :Cannot send to channel",
+                               serverHost,
+                               ERR_CANNOTSENDTOCHAN,
+                               usr->ui_nick,
+                               chan->ci_nick);
+               //printf("\nMessage to be sent:\n%s\nTo socket %d\n",buffer,usr->ui_socket);
+               send_rpl( usr->ui_socket, buffer );
+             }
+        }
+
+	else if (!is_user_on_channel(chan, usr) ){
+	    if(command==PRIVMSG){  
 		char buffer [MAX_MSG_LEN];
         	sprintf(buffer,":%s %s %s %s :Cannot send to channel", 
 				serverHost,
@@ -429,6 +444,7 @@ void send_private_message(user_info *usr, cmd_message parsed_msg, char* serverHo
 		  		chan->ci_nick);
 		//printf("\nMessage to be sent:\n%s\nTo socket %d\n",buffer,usr->ui_socket);
 		send_rpl( usr->ui_socket, buffer );
+             }
     	} 
 	else{ 
             user_info *usr_2 = (user_info*)malloc(sizeof(user_info)); 
