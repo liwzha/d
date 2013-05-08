@@ -156,9 +156,9 @@ void resp_to_cmd(user_info *usr, cmd_message parsed_msg, char* serverHost){
         case NAMES:
             rpl_names(usr, &parsed_msg, serverHost);
             break;
-        //case WHO:
-          //  send_rpl_whoreply(usr, &parsed_msg, serverHost);
-            //break;
+        case WHO:
+            rpl_who(usr, &parsed_msg, serverHost);
+           // break;
     	default:
             rpl_unknowcommand(usr, &parsed_msg, serverHost);
             break;
@@ -557,8 +557,11 @@ void rpl_whois(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHo
             user_info *p_usr_loc = list_get_at(&pt_chan->ci_operatorUsers,j);
             if( strcmp( p_usr_loc->ui_nick, nick )==0 ){
                 if( do_rplwhoischannels == 0 )
-                   sprintf(out_buf,":%s %s %s :@%s",serverHost, RPL_WHOISCHANNELS, nick, pt_chan->ci_nick);
-                else
+{
+                   sprintf(out_buf,":%s %s %s %s :@%s ",serverHost, RPL_WHOISCHANNELS, nick, nick,  pt_chan->ci_nick);
+			printf("HHHHHHHHHHHHHHHHHHHHHHHHHHHHH%sH\n",pt_chan->ci_nick);
+} 
+               else
                    sprintf(out_buf+strlen(out_buf)," @%s", pt_chan->ci_nick);
                 do_rplwhoischannels=1;
                 break;
@@ -568,9 +571,13 @@ void rpl_whois(user_info* sender_info, cmd_message* p_parsed_msg, char* serverHo
             user_info *p_usr_loc = list_get_at(&pt_chan->ci_operatorUsers,j);
             if( strcmp( p_usr_loc->ui_nick, nick )==0 ){
                 if( do_rplwhoischannels == 0 )
-                   sprintf(out_buf,":%s %s %s :+%s",serverHost, RPL_WHOISCHANNELS, nick, pt_chan->ci_nick);
+{
+ 
+                  sprintf(out_buf,":%s %s %s :+%s",serverHost, RPL_WHOISCHANNELS, nick, pt_chan->ci_nick);
+		printf("************************************************Here\n");
+}
                 else
-                   sprintf(out_buf+strlen(out_buf)," +%s", pt_chan->ci_nick);
+                  // sprintf(out_buf+strlen(out_buf)," +%s ", pt_chan->ci_nick);
                 do_rplwhoischannels=1;
                 break;
             }
@@ -1325,7 +1332,7 @@ void send_rpl_whoreply(char* serverHost, channel_info* p_chan_info, user_info* s
 
     char out_buf[1024];
     if( flag_hasparam )
-        sprintf(out_buf,":%s %s %s %s %s %s %s %s %c %s%s%s:0 %s", 
+        sprintf(out_buf,":%s %s %s %s %s %s %s %s %c%s%s%s :0 %s", 
                               serverHost,RPL_WHOREPLY,
                               sender_info->ui_nick, 
                               p_chan_info->ci_nick, 
@@ -1334,9 +1341,9 @@ void send_rpl_whoreply(char* serverHost, channel_info* p_chan_info, user_info* s
                               serverHost,
                               query_user_info->ui_nick,
                               query_user_info->awayMode?'H':'G',
-                              query_user_info->operatorMode?"* ":"",
-                 is_user_operator_user(p_chan_info,query_user_info)?"@ ":"",
-                 is_user_voice_user(p_chan_info,query_user_info)?"+ ":"",
+                              query_user_info->operatorMode?"*":"",
+                 is_user_operator_user(p_chan_info,query_user_info)?"@":"",
+                 is_user_voice_user(p_chan_info,query_user_info)?"+":"",
                                      query_user_info->ui_fullname
                                               );
     else
