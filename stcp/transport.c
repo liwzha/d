@@ -19,7 +19,7 @@
 #include "mysock.h"
 #include "stcp_api.h"
 #include "transport.h"
-
+#include "window.h"
 
 enum {CSTATE_ESTABLISHED,
     CSTATE_CLOSED,
@@ -29,14 +29,15 @@ enum {CSTATE_ESTABLISHED,
     CSTATE_LAST_ACK,
     CSTATE_TIME_WAIT
     };    /* obviously you should have more states */
-
+/*
 struct packet
 {
-/*    struct tcphdr kth; */
     struct tcphdr pa_header; 
 #define MAX_PACKET_SIZE 536
     char data[MAX_PACKET_SIZE];
 };
+*/
+
 
 /* this structure is global to a mysocket descriptor */
 typedef struct

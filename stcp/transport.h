@@ -116,6 +116,16 @@ typedef struct tcphdr
     #endif
 #endif
 
+struct packet
+{
+/*    struct tcphdr kth; */
+    struct tcphdr pa_header;
+#define MAX_PACKET_SIZE 536
+    char data[MAX_PACKET_SIZE];
+};
+
+
+
 extern void transport_init(mysocket_t sd, bool_t is_active);
 
 #endif  /* __TRANSPORT_H__ */
