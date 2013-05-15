@@ -25,17 +25,18 @@ enum {CSTATE_ESTABLISHED,
     CSTATE_CLOSED,
     CSTATE_SYN_RCVD,
     CSTATE_SYNACK_RCVD,
-    CSTATE_CLOSED_WAIT,
+    CSTATE_CLOSE_WAIT,
     CSTATE_LAST_ACK,
     CSTATE_TIME_WAIT
     };    /* obviously you should have more states */
 
-typedef struct
+struct packet
 {
-    struct tcphdr kth;
+/*    struct tcphdr kth; */
+    struct tcphdr pa_header; 
 #define MAX_PACKET_SIZE 536
     char data[MAX_PACKET_SIZE];
-} packet;
+};
 
 /* this structure is global to a mysocket descriptor */
 typedef struct
@@ -58,6 +59,35 @@ typedef struct
 static void generate_initial_seq_num(context_t *ctx);
 static void control_loop(mysocket_t sd, context_t *ctx);
 
+int fill_header(STCPHeader *pheader, int seqNum, int ackNum, int flag, int dataLen){
+
+    pheader->th_seq = seqNum;
+    pheader->th_ack = ackNum;
+    pheader->th_flags = flag;
+    pheader->th_off = sizeof( STCPHeader );
+
+    return sizeof( STCPHeader ) + dataLen;
+}
+
+
+/* only a dummy function for now. TODO complete the function, modify the interface if necessary. */
+int wait_recv(int fd, struct packet *p, int expected, int msec, int realrecv) {
+
+    return 1;
+
+}
+
+/* dummy function for compilation.  TODO delete this function?  */
+void dump_packet(struct packet *p){
+    return;
+}
+
+/* dummy function for compilation.  TODO modify / delete this function? */
+static void exit_control_loop(int reason)
+{
+    /* ctx->control_loop_not_running = reason; */
+}
+
 
 /* initialise the transport layer, and start the main loop, handling
  * any data from the peer or the application.  this function should not
@@ -65,6 +95,7 @@ static void control_loop(mysocket_t sd, context_t *ctx);
  */
 void transport_init(mysocket_t sd, bool_t is_active)
 {
+fprintf(stderr, "[transport_init] inside transport_init\n");
     context_t *ctx;
     struct packet *packet;
     struct tcphdr *hdr;
@@ -87,23 +118,25 @@ void transport_init(mysocket_t sd, bool_t is_active)
      * ECONNREFUSED, etc.) before calling the function.
      */
     ctx->seq_active = ctx->initial_sequence_num;
-    if(is_active == 1) //active mode
+    if(is_active == 1) /* active mode */
     {
+fprintf(stderr, "[transport_init] is_active == True \n");
         memset((void *)hdr, 0, sizeof(struct tcphdr));
         memset((void *)packet, 0, sizeof(struct packet));
         switch (ctx->connection_state) {
             case CSTATE_CLOSED:
                 printf("active client:CLOSED\n");
-                //send SYN
+                /* send SYN */
                 packetlen = fill_header(hdr,ctx->seq_active,0,TH_SYN, 0);
-                packet->kth = *hdr;
-                //dump_packet(packet)
-                sent = stcp_network_sent(sd,(char *)packet, packetlen,NULL);
+                packet->pa_header = *hdr;
+                /* dump_packet(packet) */
+                sent = stcp_network_send(sd,(char *)packet, packetlen,NULL);
                 if(sent == -1) perror("network_send");
                 printf("network_send: %d bytes\n", sent);
                 dprintf("active child: SYN_SENT\n");
                 
-                //recv SYNACK
+                /* recv SYNACK */
+                /*
                 if(wait_recv(comm_sd, packet, TH_SYNACK, 100, 1) == 0)
                 {
                     ctx->ack_active = packet->kth.th_ack;
@@ -116,29 +149,30 @@ void transport_init(mysocket_t sd, bool_t is_active)
                     ctx->connection_state = CSTATE_CLOSED;
                 }
                 break;
-                
+                */
             case CSTATE_SYNACK_RCVD:
+/*
                 dprintf("active child: SYNACK_RCVD\n");
-                // send ACK
+                // send ACK 
                 packetlen = fill_header(hdr, 0, ctx->ack_passive, TH_ACK, 0);
-                packet->kth = *hdr;
+                packet->pa_header = *hdr;
                 dump_packet(packet);
                 sent = network_send(comm_sd, (char *)packet, packetlen, NULL);
                 debug("network_send: %d bytes\n", sent);
                 if(sent == -1) perror("network_send");
-                // if recv SYNACK again
+                // if recv SYNACK again 
                 if(wait_recv(comm_sd, packet, TH_SYNACK, 500, 1) == 0) {
                     ctx->connection_state = CSTATE_SYNACK_RCVD;
                 }
                 else ctx->connection_state = CSTATE_ESTABLISHED;
-                break;
+*/                break;
                 
             default:
                 break;
         }
     }
     else
-    {// Passive mode
+    {/* Passive mode */
         while(ctx->connection_state != CSTATE_ESTABLISHED)
         {
             memset((void *)hdr, 0, sizeof(struct tcphdr));
@@ -146,34 +180,37 @@ void transport_init(mysocket_t sd, bool_t is_active)
             switch(ctx->connection_state){
                 case CSTATE_CLOSED:
                     printf("passive child: CLOSED\n");
-                    //wait for SYN
+                    /* wait for SYN */
                     if(wait_recv(sd, packet, TH_SYN, 0, 1) == 0)
                     {
-                        ctx->seq_passive = packet->kth.th_seq;
-                        ctx->ack_passive = packet->kth.th_seq + 1;
+                        ctx->seq_passive = packet->pa_header.th_seq;
+                        ctx->ack_passive = packet->pa_header.th_seq + 1;
                         ctx->connection_state = CSTATE_SYN_RCVD;
                     }
                     else continue;
                     break;
                 case CSTATE_SYN_RCVD:
                     printf("passive child: SYN RCVD\n");
-                    //send SYNACK
-                    packetlen = fill_header(hdr, ctx->seq_active, ctx->ack_passive, TH_SYNACK, 0);
-                    packet->kth = *hdr;
-                    //dump_packet(packet);
-                    sent = network_send(sd, (char *)packet, packetlen, NULL);
+                    /* send SYNACK */
+                    packetlen = fill_header(hdr, ctx->seq_active, ctx->ack_passive, TH_SYN | TH_ACK, 0);
+                    packet->pa_header = *hdr;
+                    /* dump_packet(packet); */
+                    sent = stcp_network_send(sd, (char *)packet, packetlen, NULL);
                     printf("network_send:%d bytes\n", sent);
                     if(sent == -1) perror("network_send");
-                    //recv ACK
+                    /* recv ACK */
+/*
                     if(wait_recv(sd, packet, TH_ACK, 100, 1) == 0)
                     {
-                        ctx->ack_active = packet->kth.th_ack;
+                        ctx->ack_active = packet->pa_header.th_ack;
                         ctx->connection_state = CSTATE_ESTABLISHED;
                         break;
                     }
+
                     else
                         ctx->connection_state=CSTATE_SYN_RCVD;
                     break;
+*/
                 default:
                     break;
             }
@@ -213,7 +250,8 @@ int transport_active_close(context_t *ctx)
     struct tcphdr *hdr = (struct tcphdr *)malloc(sizeof(struct tcphdr));
     struct packet *packet = (struct packet *)malloc(sizeof(struct packet));
     
-    close(ctx->local_data_sd);
+    /* close(ctx->local_data_sd); */
+    close(ctx->sockfd);
     printf("transport_active_close()\n");
     while(ctx->connection_state!=CSTATE_CLOSED)
     {
@@ -226,16 +264,16 @@ int transport_active_close(context_t *ctx)
         switch(ctx->connection_state) {
             case CSTATE_ESTABLISHED:
                 dprintf("active child: ESTABLISHED\n");
-                // send FIN
+                /* send FIN */
                 packetlen = fill_header(hdr, ctx->seq_active, 0, TH_FIN, 0);
-                packet->kth = *hdr;
+                packet->pa_header = *hdr;
                 dump_packet(packet);
-                if(network_send(ctx->sockfd, (char *)packet, packetlen, NULL) == -1)
+                if(stcp_network_send(ctx->sockfd, (char *)packet, packetlen, NULL) == -1)
                     perror("network_send");
-                // recv FINACK
-                if(wait_recv(ctx->sockfd, packet, TH_FINACK, 100, 1) == 0) {
-                    ctx->ack_active = packet->kth.th_ack;
-                    ctx->ack_passive = packet->kth.th_seq + 1;
+                /* recv FINACK */
+                if(wait_recv(ctx->sockfd, packet, TH_FIN | TH_ACK, 100, 1) == 0) {
+                    ctx->ack_active = packet->pa_header.th_ack;
+                    ctx->ack_passive = packet->pa_header.th_seq + 1;
                     ctx->connection_state = CSTATE_TIME_WAIT;
                 }
                 else {
@@ -244,18 +282,18 @@ int transport_active_close(context_t *ctx)
                 break;
             case CSTATE_TIME_WAIT:
                 dprintf("active child: TIME_WAIT\n");
-                // send ACK
+                /* send ACK */
                 packetlen = fill_header(hdr, 0, ctx->ack_passive, TH_ACK, 0);
-                packet->kth = *hdr;
+                packet->pa_header = *hdr;
                 dump_packet(packet);
-                if(network_send(ctx->sockfd, (char *)packet, packetlen, NULL) == -1)
+                if(stcp_network_send(ctx->sockfd, (char *)packet, packetlen, NULL) == -1)
                     perror("network_send");
-                // if recv SYNACK again
-                if(wait_recv(ctx->sockfd, packet, TH_SYNACK, 500, 1) == 0) {
+                /* if recv SYNACK again */
+                if(wait_recv(ctx->sockfd, packet, TH_SYN | TH_ACK, 500, 1) == 0) {
                     ctx->connection_state = CSTATE_ESTABLISHED;
                 }
                 else {
-                    // terminate connection
+                    /* terminate connection */
                     close(ctx->sockfd);
                     ctx->connection_state = CSTATE_CLOSED;
                     exit_control_loop(1);
@@ -294,20 +332,20 @@ int transport_passive_close(context_t *ctx) {
         switch(ctx->connection_state) {
             case CSTATE_CLOSE_WAIT:
                 printf("passive child: CLOSE_WAIT\n");
-                // send FINACK
-                packetlen = fill_header(hdr, ctx->seq_active, ctx->ack_passive, TH_FINACK, 0);
-                packet->kth = *hdr;
+                /* send FINACK */
+                packetlen = fill_header(hdr, ctx->seq_active, ctx->ack_passive, TH_FIN | TH_ACK, 0);
+                packet->pa_header = *hdr;
                 dump_packet(packet);
-                if(network_send(ctx->sockfd, (char *)packet, packetlen, NULL) == -1)
+                if(stcp_network_send(ctx->sockfd, (char *)packet, packetlen, NULL) == -1)
                     perror("network_send");
                 ctx->connection_state = CSTATE_LAST_ACK;
                 break;
             case CSTATE_LAST_ACK:
                 printf("passive child: LAST_ACK\n");
-                // recv ACK
+                /* recv ACK */
                 if(wait_recv(ctx->sockfd, packet, TH_ACK, 100, 1) == 0) {
-                    ctx->ack_active = packet->kth.th_ack;
-                    // terminate connection
+                    ctx->ack_active = packet->pa_header.th_ack;
+                    /* terminate connection */
                     close(ctx->sockfd);
                     ctx->connection_state = CSTATE_CLOSED;
                     exit_control_loop(1);
@@ -319,9 +357,9 @@ int transport_passive_close(context_t *ctx) {
         }
     }
     
-    fprint("FIN handshaking passed\n");
-    fprint("!! seq / ack active : %d %d\n", ctx->seq_active, ctx->ack_active);
-    fprint("!! ack passive: %d\n", ctx->ack_passive);
+    printf("FIN handshaking passed\n");
+    printf("!! seq / ack active : %d %d\n", ctx->seq_active, ctx->ack_active);
+    printf("!! ack passive: %d\n", ctx->ack_passive);
     free(hdr);
     free(packet);
     return 0;
