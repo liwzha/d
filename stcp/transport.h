@@ -126,6 +126,22 @@ struct packet
 };
 
 
+/* this structure is global to a mysocket descriptor */
+typedef struct
+{
+    bool_t done;    /* TRUE once connection is closed */
+
+    int connection_state;   /* state of the connection (established, etc.) */
+    tcp_seq initial_sequence_num;
+
+    /* any other connection-wide global variables go here */
+    int seq_active;   /* seq to attach on the next data */
+    int ack_active;   /* last ack received */
+    int seq_passive;  /* last seq that has been received */
+    int ack_passive;  /* next seq to receive ==  last ack that has been sent*/
+    mysocket_t sockfd;
+
+} context_t;
 
 extern void transport_init(mysocket_t sd, bool_t is_active);
 

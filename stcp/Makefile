@@ -22,7 +22,7 @@ RM=rm
 AR=ar crus
 
 SRCS_MYSOCK = transport.c mysock_api.c stcp_api.c mysock.c network.c \
-              connection_demux.c tcp_sum.c network_io.c
+              connection_demux.c tcp_sum.c network_io.c window.c
 SRCS_IO = network_io_tcp.c network_io_socket.c
 SRCS = $(SRCS_MYSOCK) $(SRCS_IO)
 
