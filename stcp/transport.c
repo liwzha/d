@@ -44,13 +44,11 @@ static void control_loop(mysocket_t sd, context_t *ctx);
 
 int fill_header(STCPHeader *pheader, int seqNum, int ackNum, int flag, int dataLen){
 
-fprintf(stderr,"lllll [fill_header]: inside fill_header, seqNum=%d, ackNum=%d, flag=%d, dataLen=%d \n",seqNum,ackNum,flag,dataLen);
     pheader->th_seq = seqNum;
     pheader->th_ack = ackNum;
     pheader->th_flags = flag;
     pheader->th_off = sizeof( struct tcphdr );
 
-fprintf(stderr,"lllll [fill_header]: about to return\n");
     return sizeof( struct tcphdr ) + dataLen;
 }
 
@@ -462,19 +460,25 @@ fprintf(stderr,"[control_loop] event: APP_DATA\n");
         if (event & NETWORK_DATA) /* recv from network */
         {
 fprintf(stderr,"[control_loop] event: NETWORK_DATA\n");
-            datalen = stcp_network_recv(sd, p_packet, sizeof(struct packet));
-            uint8_t flag = p_packet->pa_header.th_flags;
-            
+            p_packet = malloc(sizeof(struct packet));
+            datalen = stcp_network_recv(sd, &p_packet, sizeof(struct packet));
+fprintf(stderr,"received %d bytes from network, headersize: %d bytes\n",datalen, sizeof(struct tcphdr));
+            datalen -= sizeof(struct tcphdr);
+            uint8_t flag = 0;
+            flag = p_packet->pa_header.th_flags; 
+             
+fprintf(stderr,"before list of if\n");
             /* if recv ack, change context and dequeue send window */
             if (flag & TH_ACK){
-                printf("Got ACK\n");
+                fprintf(stderr,"Got ACK\n");
                 ctx->ack_active = p_packet->pa_header.th_ack;
                 win_dequeue( &send_window );
             }
 
             /* if recv data, add to recv window */
-            if (datalen > sizeof(struct packet)){
+            if (datalen > 0){
                /* How about writing to the applicatin layer??*/
+                fprintf(stderr,"Got Data\n");
                 win_enqueue( &recv_window, p_packet, datalen );
                 win_dequeue( &recv_window );
               /* Need to send ACK as well?*/
@@ -483,7 +487,7 @@ fprintf(stderr,"[control_loop] event: NETWORK_DATA\n");
             /* if recv FIN, passive close */
             if (TH_FIN){
                 /* TODO */
-            printf("Got Fin\n");
+            fprintf(stderr, "Got Fin\n");
             ctx->ack_passive = p_packet->pa_header.th_seq;
             ctx->connection_state = CSTATE_CLOSE_WAIT;
             free(p_packet);
@@ -543,7 +547,7 @@ void transport_network_io(mysocket_t sd, context_t *ctx)
 /* send packet to app (flag=0) or network (flag=1). 
    used by sliding window.
  */
-int send_packet (context_t *ctx, struct packet *pckt, int datalen, bool_t flag)
+int send_packet (context_t *ctx, struct packet *pckt, int datalen, int flag)
 {
         struct tcphdr *hdr;
         int packetlen;

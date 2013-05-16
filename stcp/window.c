@@ -109,7 +109,7 @@ fprintf(stderr,"<<<win_enqueue: inside win_enqueue\n");
       increment seq_active.
    */  
    if (pt_win->win_type == WIN_SEND){
-       send_packet(pt_win->win_ctx, pt_packet, 1); 
+       send_packet(pt_win->win_ctx, pt_packet, datalen,1); 
        pt_win->win_ctx->seq_active += datalen;
    }
  
