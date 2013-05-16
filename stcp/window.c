@@ -1,5 +1,17 @@
 #include"window.h"
 
+void win_init( window * pt_win ){
+    pt_win->win_type = WIN_UNDEF;
+    win_firstNum = -1;
+    win_buf = NULL;
+} 
+
+void win_init( window * pt_win, window_type wt, int first_seq_num){
+    pt_win->win_type = wt;
+    pt_firstNum = first_seq_num;
+    win_buf = NULL;
+}
+
 int get_seq_number( const packet * pt_packet ){
     return pt_packet->pa_header.th_seq;
 }

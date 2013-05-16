@@ -9,7 +9,7 @@ struct window_node {
     window_node * wn_next;
 };
 
-enum window_type {WIN_RECV, WIN_SEND};
+enum window_type {WIN_RECV, WIN_SEND, WIN_UNDEF};
 
 typedef struct window window;
 

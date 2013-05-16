@@ -61,6 +61,7 @@ typedef struct tcphdr
 #define TH_PUSH 0x08    /* ...or this */
 #define TH_ACK  0x10
 #define TH_URG  0x20    /* ...or this */
+#define TH_SYNACK 0x12
     uint16_t th_win;    /* window */
     uint16_t th_sum;    /* checksum */
     uint16_t th_urp;    /* urgent pointer (unused in STCP) */
