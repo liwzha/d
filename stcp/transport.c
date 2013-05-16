@@ -104,9 +104,11 @@ void dump_packet(struct packet *p){
 }
 
 /* dummy function for compilation.  TODO modify / delete this function? */
-static void exit_control_loop(int reason)
+static void exit_control_loop(context_t *ctx, int reason)
 {
     /* ctx->control_loop_not_running = reason; */
+    /* TODO */
+    transport_passive_close(ctx);
 }
 
 
@@ -324,7 +326,9 @@ int transport_active_close(context_t *ctx)
                     /* terminate connection */
                     close(ctx->sockfd);
                     ctx->connection_state = CSTATE_CLOSED;
-                    exit_control_loop(1);
+/*                    exit_control_loop(1);*/
+transport_passive_close(ctx);
+
                 }
                 break;
             default:
@@ -376,7 +380,8 @@ int transport_passive_close(context_t *ctx) {
                     /* terminate connection */
                     close(ctx->sockfd);
                     ctx->connection_state = CSTATE_CLOSED;
-                    exit_control_loop(1);
+                    /*exit_control_loop(1);*/
+transport_passive_close(ctx);
                 }
                 else ctx->connection_state = CSTATE_CLOSE_WAIT;
                 break;
@@ -465,14 +470,6 @@ static void control_loop(mysocket_t sd, context_t *ctx)
                /* How about writing to the applicatin layer??*/
                 win_enqueue( &recv_window, p_packet, datalen );
                 win_dequeue( &recv_window );
-
-
-
-
-
-
-
-
               /* Need to send ACK as well?*/
             }
 
