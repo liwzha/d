@@ -486,7 +486,7 @@ void transport_appl_io(mysocket_t sd, context_t *ctx)
         struct packet *packet = (struct packet *)malloc(sizeof(struct packet));
     
         int net_recv= stcp_app_recv(ctx->sockfd, (char *)packet, sizeof(struct packet));
-        sent = send_packet (ctx, packet,  0);
+        sent = (int)send_packet (ctx, packet,  0);
 }
 
 void transport_network_io(mysocket_t sd, context_t *ctx)
@@ -495,13 +495,13 @@ void transport_network_io(mysocket_t sd, context_t *ctx)
         struct packet *packet = (struct packet *)malloc(sizeof(struct packet));
     
         int net_recv= stcp_network_recv(ctx->sockfd, (char *)packet, sizeof(struct packet));
-        sent = send_packet (ctx, packet,  1);
+        sent = (int)send_packet (ctx, packet,  1);
 }
 
 /* send packet to app (flag=0) or network (flag=1). 
    used by sliding window.
  */
-ssize_t send_packet (context_t *ctx, struct packet *pckt, bool_t flag)
+int send_packet (context_t *ctx, struct packet *pckt, bool_t flag)
 {
         struct tcphdr *hdr;
         int packetlen;
