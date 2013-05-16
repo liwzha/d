@@ -455,26 +455,47 @@ static void control_loop(mysocket_t sd, context_t *ctx)
             
             /* if recv ack, change context and dequeue send window */
             if (flag & TH_ACK){
+                printf("Got ACK\n");
                 ctx->ack_active = p_packet->pa_header.th_ack;
                 win_dequeue( &send_window );
             }
 
             /* if recv data, add to recv window */
             if (datalen > sizeof(struct packet)){
+               /* How about writing to the applicatin layer??*/
                 win_enqueue( &recv_window, p_packet, datalen );
                 win_dequeue( &recv_window );
+
+
+
+
+
+
+
+
+              /* Need to send ACK as well?*/
             }
 
             /* if recv FIN, passive close */
             if (TH_FIN){
                 /* TODO */
-
+            printf("Got Fin\n");
+            ctx->ack_passive = p_packet->pa_header.th_seq;
+            ctx->connection_state = CSTATE_CLOSE_WAIT;
+            free(p_packet);
+            transport_passive_close(ctx);
+            return;
             }
         }
 
         if (event & APP_CLOSE_REQUESTED){ /* active close */
             /* TODO  */         
-
+	    printf("Got closing request from the application\n");
+            if(ctx->seq_active == ctx->ack_active){
+            /* Closing Control */
+            transport_active_close(ctx);
+            return;
+            }
         }    
     }
 }
