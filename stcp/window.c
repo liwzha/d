@@ -49,13 +49,23 @@ window_node * wn_con( const struct packet * pt_packet, int datalen, window_node 
 void win_dequeue( window * pt_win ){
     window_node * pt_wn = pt_win->win_buf;
     window_node * pt_wn_tmp;
-    while( pt_wn != NULL || 
-       win_get_first_num(pt_win) == get_seq_number( pt_wn->wn_packet)){
-                     
-       if( pt_win->win_type == WIN_SEND ){
-           /* TODO send ack for this packet */
-           /* TODO send data to app */
+    while( pt_wn != NULL && 
+       win_get_first_num(pt_win) > get_seq_number( pt_wn->wn_packet)){
+
+       /* if this is a recv window, send data to app and ack */
+       if( pt_win->win_type == WIN_RECV){
+           /* send ack for this packet */
+           struct packet pa;
+           int ackloc =  get_seq_number(pt_wn->wn_packet)+pt_wn->wn_datalen;
+           fill_header(pa.pa_header, 0, ackloc); 
+           /* change context */
+           pt_win->win_ctx->ack_passive = ackloc; 
+           /* send data to app */
+           send_packet(pt_win->win_ctx, &pa, 0);
        }
+
+
+       /* if this is a send window, just dequeue the acked packets from the front of the window */
        pt_wn_tmp = pt_wn;
        pt_wn = pt_wn->wn_next;
        free( pt_wn_tmp );
