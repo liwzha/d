@@ -44,12 +44,14 @@ static void control_loop(mysocket_t sd, context_t *ctx);
 
 int fill_header(STCPHeader *pheader, int seqNum, int ackNum, int flag, int dataLen){
 
+fprintf(stderr,"lllll [fill_header]: inside fill_header, seqNum=%d, ackNum=%d, flag=%d, dataLen=%d \n",seqNum,ackNum,flag,dataLen);
     pheader->th_seq = seqNum;
     pheader->th_ack = ackNum;
     pheader->th_flags = flag;
-    pheader->th_off = sizeof( STCPHeader );
+    pheader->th_off = sizeof( struct tcphdr );
 
-    return sizeof( STCPHeader ) + dataLen;
+fprintf(stderr,"lllll [fill_header]: about to return\n");
+    return sizeof( struct tcphdr ) + dataLen;
 }
 
 
@@ -67,7 +69,7 @@ fprintf(stderr,"[wait_recv] inside wait_recv, msec = %d\n",msec);
     }
 
 fprintf(stderr,"[wait_recv] about to call stcp_wait_for_event\n");
-    mask = stcp_wait_for_event(sd, APP_DATA | NETWORK_DATA,ts);
+    mask = stcp_wait_for_event(sd, APP_DATA | NETWORK_DATA, ts);/* debugging */
 fprintf(stderr,"[wait_recv] returned from stcp_wait_for_event\n");
     if (mask == TIMEOUT) {
           ret = -1;
@@ -94,7 +96,7 @@ fprintf(stderr,"[wait_recv] receive from app\n");
    
     free(ts);
 
-fprintf(stderr,"[wait_recv] about to return\n");
+fprintf(stderr,"[wait_recv] about to return, return %d, expected:%d \n", ret,expected);
     return ret;
 }
 
@@ -153,16 +155,16 @@ fprintf(stderr, "[transport_init] inside transport_init\n");
             case CSTATE_CLOSED:
                 printf("active client:CLOSED\n");
                 /* send SYN */
-                packetlen = fill_header(hdr,ctx->seq_active,0,TH_SYN, 0);
-                packet->pa_header = *hdr;
+                packetlen = fill_header(&(packet->pa_header),ctx->seq_active,0,TH_SYN, 0);
+                /* packet->pa_header = *hdr; */
                 /* dump_packet(packet) */
                 sent = stcp_network_send(sd,(char *)packet, packetlen,NULL);
                 if(sent == -1) perror("network_send");
                 printf("network_send: %d bytes\n", sent);
-                dprintf("active child: SYN_SENT\n");
+                printf("active child: SYN_SENT\n");
 
                 /* recv SYNACK */
-                if(wait_recv(sd, packet, TH_SYNACK, 100, 1) == 0)
+                if(wait_recv(sd, packet, TH_SYN | TH_ACK, 0, 1) == 0)
                 {
                     ctx->ack_active = packet->pa_header.th_ack;
                     ctx->seq_passive = packet->pa_header.th_seq;
@@ -182,10 +184,11 @@ fprintf(stderr, "[transport_init] inside transport_init\n");
                 packet->pa_header = *hdr;
                 /*dump_packet(packet);*/
                 sent = stcp_network_send(sd, (char *)packet, packetlen, NULL);
+        fprintf(stderr,"ACK sent\n");
                 /*debug("network_send: %d bytes\n", sent);*/
                 if(sent == -1) perror("network_send");
                 /* if recv SYNACK again  */
-                if(wait_recv(sd, packet, TH_SYNACK, 500, 1) == 0) {
+                if(wait_recv(sd, packet, TH_SYNACK, 1000, 1) == 0) {
                     ctx->connection_state = CSTATE_SYNACK_RCVD;
                 }
                 else 
@@ -227,10 +230,11 @@ fprintf(stderr, "[transport_init] inside transport_init\n");
                     packet->pa_header = *hdr;
                     /* dump_packet(packet); */
                     sent = stcp_network_send(sd, (char *)packet, packetlen, NULL);
+fprintf(stderr,"SYNACK sent\n");
                     printf("network_send:%d bytes\n", sent);
                     if(sent == -1) perror("network_send");
                     /* recv ACK */
-                    if(wait_recv(sd, packet, TH_ACK, 100, 1) == 0)
+                    if(wait_recv(sd, packet, TH_ACK, 0, 1) == 0)
                     {
                         ctx->ack_active = packet->pa_header.th_ack;
                         ctx->connection_state = CSTATE_ESTABLISHED;
@@ -423,6 +427,7 @@ static void generate_initial_seq_num(context_t *ctx)
  */
 static void control_loop(mysocket_t sd, context_t *ctx)
 {
+fprintf(stderr,"[control_loop] inside control_loop\n");
     struct packet *p_packet;
     struct packet *p_packet2;
     
@@ -449,12 +454,14 @@ static void control_loop(mysocket_t sd, context_t *ctx)
         /* check whether it was the network, app, or a close request */
         if (event & APP_DATA)  /* recv from app */
         {
-            datalen = get_data_app(sd, ctx, p_packet); 
+fprintf(stderr,"[control_loop] event: APP_DATA\n");
+            datalen = get_data_app(sd, ctx, &p_packet); 
             fill_header(&(p_packet->pa_header), ctx->seq_active,0,0,datalen);
             win_enqueue( &send_window, p_packet, datalen );
         }
         if (event & NETWORK_DATA) /* recv from network */
         {
+fprintf(stderr,"[control_loop] event: NETWORK_DATA\n");
             datalen = stcp_network_recv(sd, p_packet, sizeof(struct packet));
             uint8_t flag = p_packet->pa_header.th_flags;
             
@@ -498,12 +505,12 @@ static void control_loop(mysocket_t sd, context_t *ctx)
 }
 
 /* get data from app and encapsulate it into a packet, filling header with 0. */
-int get_data_app(mysocket_t sd, context_t *ctx, struct packet * p_packet)
+int get_data_app(mysocket_t sd, context_t *ctx, struct packet ** p_packet)
 {        
         int datalen;
-        p_packet = (struct packet *)malloc(sizeof(struct packet));
-        memset((void *)p_packet, 0, sizeof(struct packet));  
-        datalen = stcp_app_recv(ctx->sockfd, (char *)p_packet->data, 536);
+        *p_packet = (struct packet *)malloc(sizeof(struct packet));
+        memset((void *)(*p_packet), 0, sizeof(struct packet));  
+        datalen = stcp_app_recv(ctx->sockfd, (char *)(*p_packet)->data, 536);
         return datalen;
 }
 
@@ -514,7 +521,7 @@ struct packet *get_data_network(mysocket_t sd, context_t *ctx)
 /* TODO (is this function necessary?) */
 return NULL;
 }
-
+/*
 void transport_appl_io(mysocket_t sd, context_t *ctx)
 {        
         unsigned int sent;
@@ -532,26 +539,23 @@ void transport_network_io(mysocket_t sd, context_t *ctx)
         int net_recv= stcp_network_recv(ctx->sockfd, (char *)packet, sizeof(struct packet));
         sent = (int)send_packet (ctx, packet,  1);
 }
-
+*/
 /* send packet to app (flag=0) or network (flag=1). 
    used by sliding window.
  */
-int send_packet (context_t *ctx, struct packet *pckt, bool_t flag)
+int send_packet (context_t *ctx, struct packet *pckt, int datalen, bool_t flag)
 {
         struct tcphdr *hdr;
         int packetlen;
         unsigned int sent;
-       /* 
-        memset((void *)hdr, 0, sizeof(struct tcphdr));      
-        packetlen = fill_header(hdr,ctx->seq_active,0,TH_SYN, 0);
-        pckt->pa_header = *hdr;        
-       */
  	if(flag==1){
-        	sent = stcp_network_send (ctx->sockfd, (char *)pckt, packetlen, NULL);
+        	sent = stcp_network_send (ctx->sockfd, (char *)pckt, sizeof(struct tcphdr) + datalen, NULL);
+fprintf(stderr,"*** [send_packet]: data sent to network, sent %d bytes\n",sent);
                 return sent;
         }
         else{
-		stcp_app_send (ctx->sockfd, (char *)pckt, packetlen);
+		stcp_app_send (ctx->sockfd, (char *)pckt->data, datalen);
+fprintf(stderr,"*** [send_packet]: data sent to app\n");
                 return NULL;
         }
         free(hdr);

@@ -38,7 +38,7 @@ int win_get_last_num( window * pt_win ){
 window_node * wn_con( const struct packet * pt_packet, int datalen, window_node ** pt_next_wn ){
     window_node * pt_wn = malloc(sizeof(window_node));
     pt_wn->wn_packet = pt_packet;
-    pt_wn->wn_next = (*pt_next_wn)->wn_next;
+    pt_wn->wn_next = (*pt_next_wn);
     pt_wn->wn_datalen = datalen;
     (*pt_next_wn) = pt_wn;
     return pt_wn;
@@ -47,6 +47,7 @@ window_node * wn_con( const struct packet * pt_packet, int datalen, window_node 
 /* remove packets from buf.
    send ack at the same time if it's a recv window. */
 void win_dequeue( window * pt_win ){
+fprintf(stderr,">>>win_dequeue: inside win_dequeue\n");
     window_node * pt_wn = pt_win->win_buf;
     window_node * pt_wn_tmp;
     while( pt_wn != NULL && 
@@ -55,13 +56,15 @@ void win_dequeue( window * pt_win ){
        /* if this is a recv window, send data to app and ack */
        if( pt_win->win_type == WIN_RECV){
            /* send ack for this packet */
+           /* TODO need to change this for part b */
            struct packet pa;
            int ackloc =  get_seq_number(pt_wn->wn_packet)+pt_wn->wn_datalen;
-           fill_header(pa.pa_header, 0, ackloc); 
+           fill_header(pa.pa_header, 0, ackloc, TH_ACK, 0); 
+           send_packet(pt_win->win_ctx, &pa, 0, 1);
            /* change context */
            pt_win->win_ctx->ack_passive = ackloc; 
            /* send data to app */
-           send_packet(pt_win->win_ctx, &pa, 0);
+           send_packet(pt_win->win_ctx, pt_wn->wn_packet,pt_wn->wn_datalen ,0);
        }
 
 
@@ -70,12 +73,15 @@ void win_dequeue( window * pt_win ){
        pt_wn = pt_wn->wn_next;
        free( pt_wn_tmp );
     }
+
+fprintf(stderr,">>>win_dequeue: about to return\n");
 }
 
 /* for send window, send out the packet and enqueue.
    for recv window, just enqueue.
  */
 int win_enqueue( window * pt_win, const struct packet * pt_packet, int datalen ){
+fprintf(stderr,"<<<win_enqueue: inside win_enqueue\n");
    int seqNum;
    window_node ** pt_next_wn;
 
@@ -94,10 +100,9 @@ int win_enqueue( window * pt_win, const struct packet * pt_packet, int datalen )
       insert the new packet in the list so that the seq numbers of packets 
       in the list are kept in increasing order. */
    for (pt_next_wn = &(pt_win->win_buf) ;
-       pt_next_wn != NULL && seqNum > get_seq_number( (*pt_next_wn)->wn_packet ) ;
+       (*pt_next_wn) != NULL && seqNum > get_seq_number( (*pt_next_wn)->wn_packet ) ;
        pt_next_wn = &((*pt_next_wn)->wn_next)  )
        ;
-
    wn_con( pt_packet, datalen, pt_next_wn );
 
    /* if this is a send window, send the packet to newtork layer. 
@@ -108,6 +113,7 @@ int win_enqueue( window * pt_win, const struct packet * pt_packet, int datalen )
        pt_win->win_ctx->seq_active += datalen;
    }
  
+fprintf(stderr,"<<<win_enqueue: about to return\n");
    return 1;
 }
 
