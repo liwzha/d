@@ -420,6 +420,7 @@ static void control_loop(mysocket_t sd, context_t *ctx)
 {
     struct packet *p_packet;
     struct packet *p_packet2;
+    
     int datalen;
     assert(ctx);
 
@@ -449,14 +450,30 @@ static void control_loop(mysocket_t sd, context_t *ctx)
         }
         if (event & NETWORK_DATA) /* recv from network */
         {
-            /* if recv ack, send packets in send window */
-             
-            /* if recv data, add to recv window */
+            datalen = stcp_network_recv(sd, p_packet, sizeof(struct packet));
+            uint8_t flag = p_packet->pa_header.th_flags;
+            
+            /* if recv ack, change context and dequeue send window */
+            if (flag & TH_ACK){
+                ctx->ack_active = p_packet->pa_header.th_ack;
+                win_dequeue( &send_window );
+            }
 
+            /* if recv data, add to recv window */
+            if (datalen > sizeof(struct packet)){
+                win_enqueue( &recv_window, p_packet, datalen );
+                win_dequeue( &recv_window );
+            }
+
+            /* if recv FIN, passive close */
+            if (TH_FIN){
+                /* TODO */
+
+            }
         }
 
         if (event & APP_CLOSE_REQUESTED){ /* active close */
-            
+            /* TODO  */         
 
         }    
     }
