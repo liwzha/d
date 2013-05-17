@@ -59,39 +59,37 @@ window_node * wn_con( const struct packet * pt_packet, int datalen, window_node 
    send ack at the same time if it's a recv window. */
 void win_dequeue( window * pt_win ){
 fprintf(stderr,">>>win_dequeue: inside win_dequeue, num of packets in buf: %d\n",win_getsize(pt_win));
-    window_node * pt_wn = pt_win->win_buf;
+    window_node ** p_pt_wn = (&pt_win->win_buf);
     window_node * pt_wn_tmp;
-fprintf(stderr,"...before whilei, win seq num:%d, packet's seq num:%d\n",win_get_first_num(pt_win),get_seq_number(pt_wn->wn_packet));
-    while( pt_wn != NULL && 
-       win_get_first_num(pt_win) >= get_seq_number( pt_wn->wn_packet)){
+fprintf(stderr,"...before whilei, win seq num:%d, packet's seq num:%d\n",win_get_first_num(pt_win),get_seq_number((*p_pt_wn)->wn_packet));
+    while( (*p_pt_wn) != NULL && 
+       win_get_first_num(pt_win) >= get_seq_number( (*p_pt_wn)->wn_packet)){
 fprintf(stderr,"...inside while\n");
        /* if this is a recv window, send data to app and ack */
        if (pt_win->win_type == WIN_RECV){
            /* send ack for this packet */
            /* TODO need to change this for part b */
            struct packet pa;
-           int ackloc =  get_seq_number(pt_wn->wn_packet)+pt_wn->wn_datalen;
+           int ackloc =  get_seq_number((*p_pt_wn)->wn_packet)+(*p_pt_wn)->wn_datalen;
 fprintf(stderr,"before fill header\n");
            fill_header(&(pa.pa_header), 0, ackloc, TH_ACK, 0); 
 fprintf(stderr,"after fill header\n");
            send_packet(pt_win->win_ctx, &pa, 0, 1);
 fprintf(stderr,"ack sent\n");
            /* change context */
-           pt_win->win_ctx->ack_passive = ackloc; 
+           (pt_win)->win_ctx->ack_passive = ackloc; 
            /* send data to app */
-           send_packet(pt_win->win_ctx, pt_wn->wn_packet,pt_wn->wn_datalen ,0);
+           send_packet((pt_win)->win_ctx, (*p_pt_wn)->wn_packet,(*p_pt_wn)->wn_datalen ,0);
        }
 
 
        /* if this is a send window, just dequeue the acked packets from the front of the window */
-       pt_wn_tmp = pt_wn;
-       pt_wn = pt_wn->wn_next;
-fprintf(stderr,"before free\n");
+       pt_wn_tmp = (*p_pt_wn);
+       (*p_pt_wn) = pt_wn_tmp->wn_next;
        free( pt_wn_tmp );
-fprintf(stderr,"after free\n");
     }
 
-fprintf(stderr,">>>win_dequeue: about to return\n");
+fprintf(stderr,">>>win_dequeue: about to return, packets in the buf %d\n",win_getsize(pt_win));
 }
 
 /* for send window, send out the packet and enqueue.
@@ -129,6 +127,7 @@ fprintf(stderr,"after wn_con\n");
       increment seq_active.
    */  
    if (pt_win->win_type == WIN_SEND){
+fprintf(stderr,"this is a send window, about to call send_packet\n");
        send_packet(pt_win->win_ctx, pt_packet, datalen,1); 
        pt_win->win_ctx->seq_active += datalen;
    }

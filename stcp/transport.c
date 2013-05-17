@@ -553,14 +553,16 @@ int send_packet (context_t *ctx, struct packet *pckt, int datalen, int flag)
         int packetlen;
         unsigned int sent;
  	if(flag==1){
+fprintf(stderr,"*** [send_packet]: about to send data to network\n",sent);
         	sent = stcp_network_send (ctx->sockfd, (char *)pckt, sizeof(struct tcphdr) + datalen, NULL);
 fprintf(stderr,"*** [send_packet]: data sent to network, sent %d bytes\n",sent);
                 return sent;
         }
         else{
+fprintf(stderr,"*** [send_packet]: about to send data to app\n");
 		stcp_app_send (ctx->sockfd, (char *)pckt->data, datalen);
 fprintf(stderr,"*** [send_packet]: data sent to app\n");
-                return NULL;
+                return 0;
         }
         free(hdr);
         free(pckt);
