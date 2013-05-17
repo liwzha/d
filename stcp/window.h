@@ -15,13 +15,15 @@ enum window_type {WIN_RECV, WIN_SEND, WIN_UNDEF};
 typedef struct window window;
 struct window {
     context_t* win_ctx;
-#define win_size 3072
+#define WIN_SIZE 3072
     enum window_type win_type;
     window_node * win_buf;
 }; 
 
 /* initialize a window without */
 /* void win_init( window *pt_win ); */
+
+int win_getsize( window * pt_win);
 
 /* initialize a window by specifying the member values */
 void win_init( window * pt_win, enum window_type wt, context_t* ctx);
@@ -50,6 +52,7 @@ void win_dequeue( window * pt_win );
 int win_enqueue( window * pt_win, const struct packet * pt_packet, int datalen );
 
 int wn_get_packet_size( window_node * p_wn );
+
 
 #endif
 

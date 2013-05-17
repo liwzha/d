@@ -461,11 +461,11 @@ fprintf(stderr,"[control_loop] event: APP_DATA\n");
         {
 fprintf(stderr,"[control_loop] event: NETWORK_DATA\n");
             p_packet = malloc(sizeof(struct packet));
-            datalen = stcp_network_recv(sd, &p_packet, sizeof(struct packet));
+            datalen = stcp_network_recv(sd, (void*)(p_packet), sizeof(struct packet));
 fprintf(stderr,"received %d bytes from network, headersize: %d bytes\n",datalen, sizeof(struct tcphdr));
             datalen -= sizeof(struct tcphdr);
             uint8_t flag = 0;
-            flag = p_packet->pa_header.th_flags; 
+            flag = p_packet->pa_header.th_flags;
              
 fprintf(stderr,"before list of if\n");
             /* if recv ack, change context and dequeue send window */
@@ -485,14 +485,14 @@ fprintf(stderr,"before list of if\n");
             }
 
             /* if recv FIN, passive close */
-            if (TH_FIN){
-                /* TODO */
-            fprintf(stderr, "Got Fin\n");
-            ctx->ack_passive = p_packet->pa_header.th_seq;
-            ctx->connection_state = CSTATE_CLOSE_WAIT;
-            free(p_packet);
-            transport_passive_close(ctx);
-            return;
+            if (flag & TH_FIN){
+                    /* TODO */
+                fprintf(stderr, "Got Fin\n");
+                ctx->ack_passive = p_packet->pa_header.th_seq;
+                ctx->connection_state = CSTATE_CLOSE_WAIT;
+                free(p_packet);
+                transport_passive_close(ctx);
+                return;
             }
         }
 
