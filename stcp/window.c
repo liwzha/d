@@ -58,6 +58,7 @@ window_node * wn_con( const struct packet * pt_packet, int datalen, window_node 
 /* remove packets from buf.
    send ack at the same time if it's a recv window. */
 void win_dequeue( window * pt_win ){
+    if(pt_win->win_buf == NULL)  return;
 fprintf(stderr,">>>win_dequeue: inside win_dequeue, num of packets in buf: %d\n",win_getsize(pt_win));
     window_node ** p_pt_wn = (&pt_win->win_buf);
     window_node * pt_wn_tmp;
