@@ -62,8 +62,9 @@ fprintf(stderr,"[wait_recv] inside wait_recv, msec = %d\n",msec);
     if(msec == 0) ts = NULL;
     else {
         /* (*ts) = time(NULL); */
-        time(ts);
-        ts->tv_sec += msec/1000.0;
+        time(&(ts->tv_sec));
+        ts->tv_sec += msec/1000;
+        ts->tv_nsec = 5000;
     }
 
 fprintf(stderr,"[wait_recv] about to call stcp_wait_for_event\n");
