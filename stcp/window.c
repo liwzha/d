@@ -92,7 +92,7 @@ fprintf(stderr,"ack sent\n");
        }
 
 
-       /* if this is a send window, just dequeue the acked packets from the front of the window*/    
+       /* if this is a send window, just dequeue the acked packets from the front of the window*/ 
 	pt_wn_tmp = (*p_pt_wn);
        (*p_pt_wn) = pt_wn_tmp->wn_next;
        free( pt_wn_tmp );
@@ -159,35 +159,33 @@ bool_t wn_is_packet_delayed( window_node * pt_wn ){
 }
 
 /* TODO*/
-window_node * wn_find_packet (window_node ** pt_next_wn, tcp_seq seq, bool_t ack){
-   /* if(ack == 0){
+window_node * wn_find_packet (window_node ** pt_next_wn, int seq, bool_t ack){
+    if(ack == 0){
         window_node *p_pt_wn = *pt_next_wn;
         while(p_pt_wn) {
-                if( p_pn_wn-> == seq) {
-                        return walker;
+                if( get_seq_number(p_pt_wn->wn_packet) == seq) {
+                        return p_pt_wn;
                 }
                 
-                walker = walker->chunk_next;
+                p_pt_wn = p_pt_wn->wn_next;
         }
 
         return NULL;
     }
     else if(ack == 1){
-        struct buffer_chunk *walker = *buffer;
+        window_node *p_pt_wn = *pt_next_wn;
 
-        while(walker) {
-                if(walker->chunk_seq + 
-                        SEG_LENGTH (walker->chunk_data, walker->chunk_len) == seq) {
-                        return walker;
-                } else if (walker->chunk_seq >= seq) {
+        while(p_pt_wn) {
+                if(get_seq_number(p_pt_wn->wn_packet) +  p_pt_wn->wn_datalen == seq) { /* plus header?*/
+                        return p_pt_wn;
+                } else if ( get_seq_number(p_pt_wn->wn_packet) >= seq) {
                         return NULL;
-                }
-                
-                walker = walker->chunk_next;
+                }                
+                p_pt_wn = p_pt_wn->wn_next;
         }
 
         return NULL;
-    }*/
+    }
     return NULL;
 }
 

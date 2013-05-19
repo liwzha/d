@@ -57,6 +57,6 @@ int wn_get_packet_size( window_node * p_wn );
 
 bool_t wn_is_packet_delayed( window_node * pt_wn );
 
-window_node * wn_find_packet (window_node ** pt_next_wn, tcp_seq seq, bool_t ack);
+window_node * wn_find_packet (window_node ** pt_next_wn, int seq, bool_t ack);
 #endif
 
