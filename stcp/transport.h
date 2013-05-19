@@ -140,7 +140,7 @@ typedef struct
     int seq_passive;  /* last seq that has been received */
     int ack_passive;  /* next seq to receive ==  last ack that has been sent*/
     mysocket_t sockfd;
-
+    long int cong_estrtt;
 } context_t;
 
 extern void transport_init(mysocket_t sd, bool_t is_active);

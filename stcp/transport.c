@@ -129,7 +129,7 @@ fprintf(stderr, "[transport_init] inside transport_init\n");
     assert(ctx);
     ctx->connection_state = CSTATE_CLOSED;
     ctx->sockfd = sd;
-
+    ctx->cong_estrtt = 100000;
 
     srand(time(NULL));
     generate_initial_seq_num(ctx);
@@ -493,7 +493,7 @@ fprintf(stderr,"before list of if\n");
 
             /* if recv data, add to recv window */
             if (datalen > 0){
-               /* How about writing to the applicatin layer??*/
+               /* How about writing to the application layer??*/
                 fprintf(stderr,"Got Data\n");
                 win_enqueue( &recv_window, p_packet, datalen );
                 win_dequeue( &recv_window );
@@ -511,7 +511,6 @@ fprintf(stderr,"before list of if\n");
                 return;
             }
         }
-
         if (event & APP_CLOSE_REQUESTED){ /* active close */
             /* TODO  */         
 	    printf("Got closing request from the application\n");
@@ -534,35 +533,6 @@ int get_data_app(mysocket_t sd, context_t *ctx, struct packet ** p_packet)
         return datalen;
 }
 
-
-struct packet *get_data_network(mysocket_t sd, context_t *ctx)
-{
-
-/* TODO (is this function necessary?) */
-return NULL;
-}
-/*
-void transport_appl_io(mysocket_t sd, context_t *ctx)
-{        
-        unsigned int sent;
-        struct packet *packet = (struct packet *)malloc(sizeof(struct packet));
-    
-        int net_recv= stcp_app_recv(ctx->sockfd, (char *)packet, sizeof(struct packet));
-        sent = (int)send_packet (ctx, packet,  0);
-}
-
-void transport_network_io(mysocket_t sd, context_t *ctx)
-{
-        unsigned int sent;
-        struct packet *packet = (struct packet *)malloc(sizeof(struct packet));
-    
-        int net_recv= stcp_network_recv(ctx->sockfd, (char *)packet, sizeof(struct packet));
-        sent = (int)send_packet (ctx, packet,  1);
-}
-*/
-/* send packet to app (flag=0) or network (flag=1). 
-   used by sliding window.
- */
 int send_packet (context_t *ctx, struct packet *pckt, int datalen, int flag)
 {
         struct tcphdr *hdr;
@@ -609,6 +579,49 @@ void our_dprintf(const char *format,...)
     va_end(argptr);
     fputs(buffer, stdout);
     fflush(stdout);
+}
+
+static void estimate_rtt (context_t *ctx, tcp_seq ack_seq)
+{
+        struct window_node *seg = wn_find_packet (&ctx, ack_seq, 0); 
+        if (!seg)
+                return;
+        /* Check if this sequence number was retransmitted */
+        if (seg->wn_retransmitcnt > 0)
+                return;
+        
+        struct timeval t;
+        gettimeofday (&t, NULL);
+        
+        long int sample_rtt;
+        sample_rtt = 1000000 * (t.tv_sec - seg->wn_sendtime.tv_sec) + t.tv_usec - seg->wn_sendtime.tv_usec;
+        
+        ctx->cong_estrtt = (long int)(0.875 * ctx->cong_estrtt + 0.125 * sample_rtt);
+}
+static int retransmit (context_t *ctx, tcp_seq seq)
+{
+        int rv = -1;
+        while (rv == -1) {
+            struct window_node *seg = wn_find_packet (&ctx, seq, 1); 
+            /* retransmit using Go-Back-N */
+            if (ctx->connection_state == CSTATE_LAST_ACK) {
+                ctx->connection_state = CSTATE_CLOSED;
+                ctx->done = TRUE;
+            }
+        
+            while (seg) {                
+                 seg->wn_retransmitcnt++;
+                 if (seg->wn_retransmitcnt > 5){
+                	fprintf(stderr,"Network down!!");
+                        ctx->done = TRUE;
+                }
+		rv = stcp_network_send(ctx->sockfd,(char *)seg->wn_packet, seg->wn_datalen,NULL);
+                gettimeofday (&seg->wn_sendtime, NULL);
+                if(rv < 0)
+			fprintf(stderr,"Packet sending failed!!");               
+                seg = seg->wn_next;
+            }            
+       }
 }
 
 

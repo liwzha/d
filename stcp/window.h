@@ -8,6 +8,8 @@ struct window_node {
     struct packet * wn_packet;
     int wn_datalen;
     window_node * wn_next;
+    struct timeval wn_sendtime; /* Time stamp when the data packet is sent */
+    short int wn_retransmitcnt; /* number of times this packte is transmitted */
 };
 
 enum window_type {WIN_RECV, WIN_SEND, WIN_UNDEF};
@@ -41,7 +43,7 @@ int win_get_first_num( window * pt_win );
 int win_get_last_num( window * pt_win );
 
 /* construct a window_node for the packet and insert it between the owner of (pt_next_wn) and the node pointed by *pt_next_wn */
-window_node * wn_con( const struct packet * pt_packet, int datalen, window_node ** pt_next_wn );
+void wn_con( const struct packet * pt_packet, int datalen, window_node ** pt_next_wn );
 
 
 /* remove packets from buf.
@@ -53,6 +55,8 @@ int win_enqueue( window * pt_win, const struct packet * pt_packet, int datalen )
 
 int wn_get_packet_size( window_node * p_wn );
 
+bool_t wn_is_packet_delayed( window_node * pt_wn );
 
+window_node * wn_find_packet (window_node ** pt_next_wn, tcp_seq seq, bool_t ack);
 #endif
 
