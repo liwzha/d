@@ -453,18 +453,20 @@ fprintf(stderr,"[control_loop] inside control_loop\n");
 
     win_init( &recv_window, WIN_RECV, ctx );
     win_init( &send_window, WIN_SEND, ctx );
-
+	struct timespec *t = (struct timespec *)malloc (sizeof(struct timespec));
+	set_timeout (ctx, t);
+	ctx->cong_estrtt*=1000;
+	fprintf(stderr,"[Control Loop set timeout] %d %d %d\n",
+              t->tv_sec, t->tv_nsec, ctx->cong_estrtt);
     while (!ctx->done)
     {
         unsigned int event;
 
         /* see stcp_api.h or stcp_api.c for details of this function */
         /* XXX: you will need to change some of these arguments! */
-        event = stcp_wait_for_event(sd, ANY_EVENT, NULL);
-
-        /*if (event & TIMEOUT){
-        }*/
- 
+        
+       /* event = stcp_wait_for_event(sd, ANY_EVENT, t);*/
+		event = stcp_wait_for_event(sd, ANY_EVENT, NULL);
         /* check whether it was the network, app, or a close request */
         if (event & APP_DATA)  /* recv from app */
         {
@@ -472,6 +474,7 @@ fprintf(stderr,"[control_loop] event: APP_DATA\n");
             datalen = get_data_app(sd, ctx, &p_packet); 
             fill_header(&(p_packet->pa_header), ctx->seq_active,0,0,datalen);
             win_enqueue( &send_window, p_packet, datalen );
+            update_timeout(ctx, t,&send_window);
         }
         if (event & NETWORK_DATA) /* recv from network */
         {
@@ -489,6 +492,7 @@ fprintf(stderr,"before list of if\n");
                 fprintf(stderr,"Got ACK\n");
                 ctx->ack_active = p_packet->pa_header.th_ack;
                 win_dequeue( &send_window );
+                /* update_timeout(ctx, t,&send_window);*/
             }
 
             /* if recv data, add to recv window */
@@ -499,7 +503,7 @@ fprintf(stderr,"before list of if\n");
                 win_dequeue( &recv_window );
               /* Need to send ACK as well?*/
             }
-
+            
             /* if recv FIN, passive close */
             if (flag & TH_FIN){
                     /* TODO */
@@ -511,13 +515,22 @@ fprintf(stderr,"before list of if\n");
                 return;
             }
         }
+        if (event & TIMEOUT){
+            fprintf(stderr,"Got Timeout\n");
+        	window_node ** pt_next_wn;
+        	pt_next_wn = &( send_window.win_buf);
+        	while((*pt_next_wn) != NULL){        		
+        		retransmit ( ctx, *pt_next_wn );
+        		pt_next_wn = &((*pt_next_wn)->wn_next) ;
+        	}
+        }
         if (event & APP_CLOSE_REQUESTED){ /* active close */
             /* TODO  */         
-	    printf("Got closing request from the application\n");
+	    	printf("Got closing request from the application\n");
             if(ctx->seq_active == ctx->ack_active){
-            /* Closing Control */
-            transport_active_close(ctx);
-            return;
+            	/* Closing Control */
+            	transport_active_close(ctx);
+            	return;
             }
         }    
     }
@@ -581,48 +594,64 @@ void our_dprintf(const char *format,...)
     fflush(stdout);
 }
 
-static void estimate_rtt (context_t *ctx, tcp_seq ack_seq)
+static void estimate_rtt (context_t *ctx, struct timeval sendtime)
 {
-        struct window_node *seg = wn_find_packet (&ctx, ack_seq, 0); 
-        if (!seg)
-                return;
-        /* Check if this sequence number was retransmitted */
-        if (seg->wn_retransmitcnt > 0)
-                return;
-        
-        struct timeval t;
-        gettimeofday (&t, NULL);
-        
-        long int sample_rtt;
-        sample_rtt = 1000000 * (t.tv_sec - seg->wn_sendtime.tv_sec) + t.tv_usec - seg->wn_sendtime.tv_usec;
-        
-        ctx->cong_estrtt = (long int)(0.875 * ctx->cong_estrtt + 0.125 * sample_rtt);
+	struct timeval t;
+    gettimeofday (&t, NULL);   
+    long int sample_rtt;
+    sample_rtt = 1000000 * (t.tv_sec - sendtime.tv_sec) + t.tv_usec - sendtime.tv_usec;
+    ctx->cong_estrtt = (long int)(0.875 * ctx->cong_estrtt + 0.125 * sample_rtt);
 }
-static int retransmit (context_t *ctx, tcp_seq seq)
+void retransmit (context_t *ctx, window_node *seg )
 {
-        int rv = -1;
-        while (rv == -1) {
-            struct window_node *seg = wn_find_packet (&ctx, seq, 1); 
+    int rv = -1;
+    while (rv == -1) {
             /* retransmit using Go-Back-N */
-            if (ctx->connection_state == CSTATE_LAST_ACK) {
-                ctx->connection_state = CSTATE_CLOSED;
-                ctx->done = TRUE;
-            }
-        
-            while (seg) {                
-                 seg->wn_retransmitcnt++;
-                 if (seg->wn_retransmitcnt > 5){
-                	fprintf(stderr,"Network down!!");
-                        ctx->done = TRUE;
-                }
-		rv = stcp_network_send(ctx->sockfd,(char *)seg->wn_packet, seg->wn_datalen,NULL);
-                gettimeofday (&seg->wn_sendtime, NULL);
-                if(rv < 0)
+    	if (ctx->connection_state == CSTATE_LAST_ACK) {
+        	ctx->connection_state = CSTATE_CLOSED;
+        	ctx->done = TRUE;
+    	}	
+	    while (seg) {                
+    	    seg->wn_retransmitcnt++;
+    	    if (seg->wn_retransmitcnt > 5){
+    	       	fprintf(stderr,"Network down!!");
+    	        ctx->done = TRUE;
+    	    }
+			rv = stcp_network_send(ctx->sockfd,(char *)seg->wn_packet, seg->wn_datalen,NULL);
+    	    gettimeofday (&seg->wn_sendtime, NULL);
+    	    if(rv < 0)
 			fprintf(stderr,"Packet sending failed!!");               
-                seg = seg->wn_next;
-            }            
-       }
+    	    seg = seg->wn_next;
+    	}            
+    }
 }
+
+void update_timeout(context_t *ctx, struct timespec *t, window *pt_win){
+    struct timeval rtt_timeout;
+    struct timeval packet_time = (pt_win->win_buf)->wn_sendtime;
+    rtt_timeout.tv_sec = (int)(ctx->cong_estrtt/1000000);
+    rtt_timeout.tv_usec = ctx->cong_estrtt - rtt_timeout.tv_sec * 1000000;
+    /* convert to timespec */
+    t->tv_nsec = (rtt_timeout.tv_usec + packet_time.tv_usec )* 1000;
+    t->tv_sec = (rtt_timeout.tv_sec + packet_time.tv_sec); 
+}
+void set_timeout (context_t *ctx, struct timespec *t){
+    /* Just return currect time plus estimated_rtt*/	
+    struct timeval rtt_timeout, current_time;
+    gettimeofday( &current_time ,NULL);
+    rtt_timeout.tv_sec = (int)(ctx->cong_estrtt/1000000);
+    rtt_timeout.tv_usec = ctx->cong_estrtt - rtt_timeout.tv_sec * 1000000;
+    /* convert to timespec */
+    t->tv_nsec = ( rtt_timeout.tv_usec + current_time.tv_usec )* 1000;
+    t->tv_sec = ( rtt_timeout.tv_sec+ current_time.tv_sec);
+    return t;
+}
+
+
+
+
+
+
 
 
 
