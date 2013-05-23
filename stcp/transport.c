@@ -159,12 +159,15 @@ fprintf(stderr, "[transport_init] inside transport_init\n");
                 /* dump_packet(packet) */
                 sent = stcp_network_send(sd,(char *)packet, packetlen,NULL);
                 if(sent == -1) perror("network_send");
-                printf("network_send: %d bytes\n", sent);
+                struct timeval sendtime;
+		gettimeofday(&sendtime, NULL);
+		printf("network_send: %d bytes\n", sent);
                 printf("active child: SYN_SENT\n");
 
                 /* recv SYNACK */
                 if(wait_recv(sd, packet, TH_SYN | TH_ACK, 0, 1) == 0)
                 {
+		    estimate_rtt(ctx,sendtime);
                     ctx->ack_active = packet->pa_header.th_ack;
                     ctx->seq_passive = packet->pa_header.th_seq;
                     ctx->ack_passive = packet->pa_header.th_seq + 1;
@@ -192,6 +195,7 @@ fprintf(stderr, "[transport_init] inside transport_init\n");
                 }
                 else 
 		{
+		estimate_rtt(ctx, packet->pa_header.th_seq);
 		ctx->connection_state = CSTATE_ESTABLISHED;
 		printf("Established!\n");
 		}
@@ -229,12 +233,15 @@ fprintf(stderr, "[transport_init] inside transport_init\n");
                     packet->pa_header = *hdr;
                     /* dump_packet(packet); */
                     sent = stcp_network_send(sd, (char *)packet, packetlen, NULL);
-fprintf(stderr,"SYNACK sent\n");
+		    fprintf(stderr,"SYNACK sent\n");
+	            struct timeval sendtime;
+		    gettimeofday(&sendtime,NULL);
                     printf("network_send:%d bytes\n", sent);
                     if(sent == -1) perror("network_send");
                     /* recv ACK */
                     if(wait_recv(sd, packet, TH_ACK, 0, 1) == 0)
                     {
+			estimate_rtt(ctx, sendtime);
                         ctx->ack_active = packet->pa_header.th_ack;
                         ctx->connection_state = CSTATE_ESTABLISHED;
                         printf("Established!!!\n");
