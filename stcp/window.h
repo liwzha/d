@@ -55,6 +55,8 @@ int win_enqueue( window * pt_win, const struct packet * pt_packet, int datalen )
 
 int win_isfull( window * pt_win );
 
+int win_dequeue_helper( window* pt_win, int seq_num );
+
 window_node * win_get_last_node( window * pt_win );
 
 int wn_get_packet_size( window_node * p_wn );
