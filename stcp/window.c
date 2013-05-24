@@ -67,24 +67,21 @@ fprintf(stderr,"<<<<window_node:exiting window_node %d %d\n",
 send ack at the same time if it's a recv window. */
 void win_dequeue( window * pt_win ){
     if(pt_win->win_buf == NULL) return;
-fprintf(stderr,">>>win_dequeue: inside win_dequeue, num of packets in buf: %d\n",win_getsize(pt_win));
+fprintf(stderr,">>>%s win_dequeue: inside win_dequeue, num of packets in buf: %d, first num: %d\n", pt_win->win_type==WIN_RECV?"recv":"send", win_getsize(pt_win), win_get_first_num(pt_win));
     window_node ** p_pt_wn = (&pt_win->win_buf);
     window_node * pt_wn_tmp;
-fprintf(stderr,"...before whilei, win seq num:%d, packet's seq num:%d\n",win_get_first_num(pt_win),get_seq_number((*p_pt_wn)->wn_packet));
+fprintf(stderr,"...before while, win seq num:%d, packet's seq num:%d\n",win_get_first_num(pt_win),get_seq_number((*p_pt_wn)->wn_packet));
     while( (*p_pt_wn) != NULL &&
        win_get_first_num(pt_win) >= get_seq_number( (*p_pt_wn)->wn_packet)){
-fprintf(stderr,"...inside while\n");
        /* if this is a recv window, send data to app and ack */
        if (pt_win->win_type == WIN_RECV){
            /* send ack for this packet */
            /* TODO need to change this for part b */
            struct packet pa;
            int ackloc = get_seq_number((*p_pt_wn)->wn_packet)+(*p_pt_wn)->wn_datalen;
-fprintf(stderr,"before fill header\n");
            fill_header(&(pa.pa_header), 0, ackloc, TH_ACK, 0);
-fprintf(stderr,"after fill header\n");
            send_packet(pt_win->win_ctx, &pa, 0, 1);
-fprintf(stderr,"ack sent\n");
+fprintf(stderr,"ack sent, ack #: %d\n", ackloc);
            /* change context */
            (pt_win)->win_ctx->ack_passive = ackloc;
            /* send data to app */
@@ -105,7 +102,7 @@ fprintf(stderr,">>>win_dequeue: about to return, packets in the buf %d\n",win_ge
 for recv window, just enqueue.
 */
 int win_enqueue( window * pt_win, const struct packet * pt_packet, int datalen ){
-fprintf(stderr,"<<<win_enqueue: inside win_enqueue\n");
+fprintf(stderr,"<<<%s win_enqueue: inside win_enqueue\n",pt_win->win_type==WIN_RECV?"recv":"send");
    int seqNum;
    window_node ** pt_next_wn;
 fprintf(stderr,"before get seq number\n");
@@ -113,24 +110,23 @@ fprintf(stderr,"before get seq number\n");
 fprintf(stderr,"after get seq number\n");
    
    if ( seqNum < win_get_first_num( pt_win ) ){
-       fprintf(stderr,"[window] rejecting a packet -- seq # too low\n");
+       fprintf(stderr,"[%s window] rejecting a packet -- seq # too low\n",pt_win->win_type==WIN_RECV?"recv":"send") ;
        return -1;
    }
+/* TODO: for sending window, should not just reject the packet */
    if ( seqNum+datalen-1 > win_get_last_num( pt_win ) ){
-       fprintf(stderr,"[window] rejecting a packet -- seq # too high\n");
-       return -1;
+       fprintf(stderr,"[%s window] rejecting a packet -- seq # too high\n",pt_win->win_type==WIN_RECV?"recv":"send");
+       if (pt_win->win_type == WIN_RECV)
+           return -1;
    }
 
-fprintf(stderr,"before for loop\n");
    /* iterate through packets in the buf list.
 insert the new packet in the list so that the seq numbers of packets
 in the list are kept in increasing order. */
    for (pt_next_wn = &(pt_win->win_buf) ;
        (*pt_next_wn) != NULL && seqNum > get_seq_number( (*pt_next_wn)->wn_packet ) ;
        pt_next_wn = &((*pt_next_wn)->wn_next) ) ;
-fprintf(stderr,"before wn_con\n");
    wn_con( pt_packet, datalen, pt_next_wn );
-fprintf(stderr,"after wn_con\n");
 
    /* if this is a send window, send the packet to newtork layer.
 increment seq_active.
@@ -149,6 +145,22 @@ int wn_get_packet_size( window_node * p_wn ){
     return sizeof(struct tcphdr) + p_wn->wn_datalen;
 }
 
+window_node * win_get_last_node( window * pt_win ){
+   window_node * pt_wn = pt_win->win_buf;
+   while (pt_wn != NULL && pt_wn->wn_next != NULL){
+       pt_wn = pt_wn->wn_next;  
+   }
+   return pt_wn;
+}
 
+int win_isfull( window * pt_win ){
+    window_node * pt_wn = win_get_last_node( pt_win );
+    if (pt_wn == NULL)
+        return 0;
+    if (pt_wn->wn_datalen + get_seq_number(pt_wn->wn_packet) > win_get_last_num( pt_win))
+        return 1;
+
+    return 0;
+}
 
 

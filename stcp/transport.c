@@ -448,6 +448,7 @@ static void generate_initial_seq_num(context_t *ctx)
  */
 static void control_loop(mysocket_t sd, context_t *ctx)
 {
+/* tag:control_loop */
 fprintf(stderr,"[control_loop] inside control_loop\n");
     struct packet *p_packet;
     struct packet *p_packet2;
@@ -464,15 +465,22 @@ fprintf(stderr,"[control_loop] inside control_loop\n");
 	/*set_timeout (ctx, t);*/
 /*	fprintf(stderr,"[Control Loop set timeout] %d %d %d\n",
               t->tv_sec, t->tv_nsec, ctx->cong_estrtt); */
+
+    unsigned int event_towait = ANY_EVENT;
     while (!ctx->done)
     {
         unsigned int event;
+        if (win_isfull(&send_window))
+            event_towait = TIMEOUT | NETWORK_DATA | APP_CLOSE_REQUESTED;
+        else
+            event_towait = ANY_EVENT;
 
 fprintf(stderr,"[control loop] loop all over again\n");
         /* see stcp_api.h or stcp_api.c for details of this function */
         /* XXX: you will need to change some of these arguments! */
-        
-        event = stcp_wait_for_event(sd, ANY_EVENT, t);
+fprintf(stderr,"waiting for event...");        
+        event = stcp_wait_for_event(sd, event_towait, t);
+fprintf(stderr,"got event!\n");
 /*		event = stcp_wait_for_event(sd, ANY_EVENT, NULL);*/
         /* check whether it was the network, app, or a close request */
         if (event & APP_DATA)  /* recv from app */
@@ -480,7 +488,7 @@ fprintf(stderr,"[control loop] loop all over again\n");
 fprintf(stderr,"[control_loop] event: APP_DATA\n");
             datalen = get_data_app(sd, ctx, &p_packet); 
             fill_header(&(p_packet->pa_header), ctx->seq_active,0,0,datalen);
-            win_enqueue( &send_window, p_packet, datalen );
+            win_enqueue(&send_window, p_packet, datalen);
             update_timeout(ctx, t,&send_window);
         }
         if (event & NETWORK_DATA) /* recv from network */

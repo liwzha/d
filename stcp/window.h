@@ -53,10 +53,16 @@ void win_dequeue( window * pt_win );
 /* add a packet into the window */
 int win_enqueue( window * pt_win, const struct packet * pt_packet, int datalen );
 
+int win_isfull( window * pt_win );
+
+window_node * win_get_last_node( window * pt_win );
+
 int wn_get_packet_size( window_node * p_wn );
 
 bool_t wn_is_packet_delayed( window_node * pt_wn );
 
 window_node * wn_find_packet (window_node ** pt_next_wn, int seq, bool_t ack);
+
+
 #endif
 
