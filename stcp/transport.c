@@ -473,7 +473,7 @@ fprintf(stderr,"[control_loop] inside control_loop\n");
             event_towait = ANY_EVENT;
 
 fprintf(stderr,"[control loop] loop all over again\n");
-fprintf(stderr,"[control loop] time out in %d seconds \n", ts_timeout==NULL?-1:ts_timeout->tv_sec);
+fprintf(stderr,"[control loop] time out in %ld seconds \n", ts_timeout==NULL?-1:ts_timeout->tv_sec);
 fprintf(stderr,"waiting for event...%s...",event_towait==ANY_EVENT?"ANY_EVENT":"ignoring app event");        
         /*
         ts_timeout = (struct timespec*) malloc(sizeof(struct timespec));
@@ -573,7 +573,7 @@ int send_packet (context_t *ctx, struct packet *pckt, int datalen, int flag)
         int packetlen;
         unsigned int sent;
  	if(flag==1){
-fprintf(stderr,"*** [send_packet]: about to send data to network\n",sent);
+fprintf(stderr,"*** [send_packet]: about to send data to network\n");
         	sent = stcp_network_send (ctx->sockfd, (char *)pckt, sizeof(struct tcphdr) + datalen, NULL);
 fprintf(stderr,"*** [send_packet]: data sent to network, sent %d bytes\n",sent);
                 return sent;
@@ -656,10 +656,10 @@ fprintf(stderr,"Size of packet %d %d %d\n",wn_get_packet_size(seg),seg->wn_datal
 fprintf(stderr, "************exiting: retransmiting***********\n"); 
 }
 
-
+/*
 void update_timeout(context_t *ctx, struct timespec **t, window *pt_win){
     struct timeval rtt_timeout;
-/* TODO: change the next line: need null check */
+ TODO: change the next line: need null check 
 
     struct timeval packet_time;
     if (pt_win->win_buf == NULL){
@@ -674,13 +674,14 @@ fprintf(stderr,"------update timeout----->>no timeout now\n");
         packet_time = (pt_win->win_buf)->wn_sendtime;
         rtt_timeout.tv_sec = (int)(ctx->cong_estrtt/1000000);
         rtt_timeout.tv_usec = ctx->cong_estrtt - rtt_timeout.tv_sec * 1000000;
-        /* convert to timespec */
+         convert to timespec 
         (*t)->tv_nsec = (rtt_timeout.tv_usec + packet_time.tv_usec )* 1000;
         (*t)->tv_sec = (rtt_timeout.tv_sec + packet_time.tv_sec + 1); 
+
 fprintf(stderr,"------update timeout----->>timeout is set to %ld sec\n",(*t)->tv_sec);
     }
 }
-
+*/
 void update_timeout_window_node(context_t *ctx, struct timespec **t, window_node *pt_win_node){
     struct timeval rtt_timeout;
 
@@ -698,25 +699,15 @@ fprintf(stderr,"------update timeout----->>no timeout now\n");
         rtt_timeout.tv_sec = (int)(ctx->cong_estrtt/1000000);
         rtt_timeout.tv_usec = ctx->cong_estrtt - rtt_timeout.tv_sec * 1000000;
         /* convert to timespec */
-/* (*t)->tv_nsec = (rtt_timeout.tv_usec + packet_time.tv_usec )* 1000; */
-/* (*t)->tv_sec = (rtt_timeout.tv_sec + packet_time.tv_sec); */
+
+ (*t)->tv_nsec = (rtt_timeout.tv_usec + packet_time.tv_usec )* 1000; 
+ (*t)->tv_sec = (rtt_timeout.tv_sec + packet_time.tv_sec + 1); 
+/*
         (*t)->tv_nsec = ( packet_time.tv_usec )*1000;
         (*t)->tv_sec = (1 + packet_time.tv_sec); 
+*/
+fprintf(stderr,"tv %ld:%ld \n",rtt_timeout.tv_sec, rtt_timeout.tv_usec);
 fprintf(stderr,"------update timeout----->>timeout is set to %ld:%d sec and estimated_rtt=%d\n",(*t)->tv_sec,(*t)->tv_nsec,ctx->cong_estrtt);
     }
 }
-/*
-void set_timeout (context_t *ctx, struct timespec *t){
-    // Just return currect time plus estimated_rtt	
-    struct timeval rtt_timeout, current_time;
-    gettimeofday( &current_time ,NULL);
-    rtt_timeout.tv_sec = (int)(ctx->cong_estrtt/1000000);
-    rtt_timeout.tv_usec = ctx->cong_estrtt - rtt_timeout.tv_sec * 1000000;
-    // convert to timespec 
-    t->tv_nsec = ( rtt_timeout.tv_usec + current_time.tv_usec )* 1000;
-    t->tv_sec = ( rtt_timeout.tv_sec+ current_time.tv_sec);
-    return t;
-}
-
-*/
 

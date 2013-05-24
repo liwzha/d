@@ -70,27 +70,32 @@ void win_dequeue( window * pt_win ){
 fprintf(stderr,">>> [%s window] win_dequeue: inside win_dequeue, num of packets in buf: %d, first num: %d\n", pt_win->win_type==WIN_RECV?"recv":"send", win_getsize(pt_win), win_get_first_num(pt_win));
     window_node ** p_pt_wn = &(pt_win->win_buf);
     window_node * pt_wn_tmp;
+
+    int ackloc=-1;
+
     while( (*p_pt_wn) != NULL && win_dequeue_helper(pt_win, get_seq_number( (*p_pt_wn)->wn_packet))){
-       /* if this is a recv window, send data to app and ack */
+       /* if this is a recv window, cumulative ack , send data to app */
        if (pt_win->win_type == WIN_RECV){
+          ackloc = get_seq_number((*p_pt_wn)->wn_packet)+(*p_pt_wn)->wn_datalen;
+          /* send data to app */
+          send_packet((pt_win)->win_ctx, (*p_pt_wn)->wn_packet,(*p_pt_wn)->wn_datalen ,0);
+       }
+           /* if this is a send window, just dequeue the acked packets from the front of the window*/
+       pt_wn_tmp = (*p_pt_wn);
+       (*p_pt_wn) = pt_wn_tmp->wn_next;
+       free( pt_wn_tmp );
+    }
+
+   if (pt_win->win_type == WIN_RECV && ackloc!=-1){
            /* send ack for this packet */
-           /* TODO need to change this for part b */
            struct packet pa;
-           int ackloc = get_seq_number((*p_pt_wn)->wn_packet)+(*p_pt_wn)->wn_datalen;
            fill_header(&(pa.pa_header), 0, ackloc, TH_ACK, 0);
            send_packet(pt_win->win_ctx, &pa, 0, 1);
 fprintf(stderr,"ack sent, ack #: %d\n", ackloc);
            /* change context */
            (pt_win)->win_ctx->ack_passive = ackloc;
-           /* send data to app */
-           send_packet((pt_win)->win_ctx, (*p_pt_wn)->wn_packet,(*p_pt_wn)->wn_datalen ,0);
        }
 
-       /* if this is a send window, just dequeue the acked packets from the front of the window*/
-       pt_wn_tmp = (*p_pt_wn);
-       (*p_pt_wn) = pt_wn_tmp->wn_next;
-       free( pt_wn_tmp );
-    }
 
 fprintf(stderr,">>>win_dequeue: about to return, packets in the buf %d, win lower bound: %d\n",win_getsize(pt_win), win_get_first_num(pt_win));
 }
