@@ -476,11 +476,12 @@ fprintf(stderr,"[control_loop] inside control_loop\n");
             event_towait = ANY_EVENT;
 
 fprintf(stderr,"[control loop] loop all over again\n");
+fprintf(stderr,"[control loop] time out in %d seconds \n", t==NULL?-1:t->tv_sec);
         /* see stcp_api.h or stcp_api.c for details of this function */
         /* XXX: you will need to change some of these arguments! */
 fprintf(stderr,"waiting for event...");        
         event = stcp_wait_for_event(sd, event_towait, t);
-fprintf(stderr,"got event!\n");
+fprintf(stderr,"...got event!\n");
 /*		event = stcp_wait_for_event(sd, ANY_EVENT, NULL);*/
         /* check whether it was the network, app, or a close request */
         if (event & APP_DATA)  /* recv from app */
@@ -489,7 +490,7 @@ fprintf(stderr,"[control_loop] event: APP_DATA\n");
             datalen = get_data_app(sd, ctx, &p_packet); 
             fill_header(&(p_packet->pa_header), ctx->seq_active,0,0,datalen);
             win_enqueue(&send_window, p_packet, datalen);
-            update_timeout(ctx, t,&send_window);
+            update_timeout(ctx, &t, &send_window);
         }
         if (event & NETWORK_DATA) /* recv from network */
         {
@@ -507,7 +508,7 @@ fprintf(stderr,"before list of if\n");
                 fprintf(stderr,"Got ACK\n");
                 ctx->ack_active = p_packet->pa_header.th_ack;
                 win_dequeue( &send_window );
-                update_timeout(ctx, t,&send_window);
+                update_timeout(ctx, &t, &send_window);
             }
 
             /* if recv data, add to recv window */
@@ -530,8 +531,8 @@ fprintf(stderr,"before list of if\n");
                 return;
             }
         }
-        if (event & TIMEOUT){
-            fprintf(stderr,"Got Timeout\n");
+        if (event == TIMEOUT){
+            fprintf(stderr,"********************Got Timeout*************************\n");
         	window_node ** pt_next_wn;
         	pt_next_wn = &( send_window.win_buf);
         	while((*pt_next_wn) != NULL){        		
@@ -642,25 +643,27 @@ fprintf(stderr, "************retransmiting***********\n");
     }
 }
 
-void update_timeout(context_t *ctx, struct timespec *t, window *pt_win){
+void update_timeout(context_t *ctx, struct timespec **t, window *pt_win){
     struct timeval rtt_timeout;
 /* TODO: change the next line: need null check */
 
     struct timeval packet_time;
     if (pt_win->win_buf == NULL){
-        if (t!=NULL)
-            free(t);
-        t = NULL;
+        if ((*t)!=NULL)
+            free(*t);
+        (*t) = NULL;
+fprintf(stderr,"------update timeout----->>no timeout now\n");
     }
     else{
-        if (t==NULL)
-            t = (struct timespec *) malloc(sizeof(struct timespec));
+        if ((*t)==NULL)
+            (*t) = (struct timespec *) malloc(sizeof(struct timespec));
         packet_time = (pt_win->win_buf)->wn_sendtime;
         rtt_timeout.tv_sec = (int)(ctx->cong_estrtt/1000000);
         rtt_timeout.tv_usec = ctx->cong_estrtt - rtt_timeout.tv_sec * 1000000;
         /* convert to timespec */
-        t->tv_nsec = (rtt_timeout.tv_usec + packet_time.tv_usec )* 1000;
-        t->tv_sec = (rtt_timeout.tv_sec + packet_time.tv_sec); 
+        (*t)->tv_nsec = (rtt_timeout.tv_usec + packet_time.tv_usec )* 1000;
+        (*t)->tv_sec = (rtt_timeout.tv_sec + packet_time.tv_sec); 
+fprintf(stderr,"------update timeout----->>timeout is set to %ld sec\n",(*t)->tv_sec);
     }
 }
 /*
