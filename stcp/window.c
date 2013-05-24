@@ -115,9 +115,20 @@ fprintf(stderr,"<<<[%s window] win_enqueue: inside win_enqueue\n",pt_win->win_ty
    }
 /* TODO: for sending window, should not just reject the packet */
    if ( seqNum+datalen-1 > win_get_last_num( pt_win ) ){
-       fprintf(stderr,"[%s window] rejecting a packet -- seq # too high\n",pt_win->win_type==WIN_RECV?"recv":"send");
-       if (pt_win->win_type == WIN_RECV)
-           return -1;
+        
+	if(seqNum > win_get_last_num(pt_win)&&pt_win->win_type == WIN_RECV)
+	{
+	    fprintf(stderr, "[%s window] rejecting a pakcet -- seq# > upperband of window\n", pt_win->win_type==WIN_RECV?"recv":"send");
+	    return -1;
+	}
+	
+	else if (pt_win->win_type == WIN_RECV)
+        {
+	    fprintf(stderr, "[%s window] need to split packet -- seq # < upperband of window but seq# + datalen > upperband of window", pt_win->win_type == WIN_RECV?"recv":"send");
+	    int availableLen = win_get_last_num(pt_win) - seqNum + 1
+            pt_packet = split(pt_packet, availableLen,WIN_RECV);
+	    datalen = availableLen;
+        }
    }
 
    /* iterate through packets in the buf list.
