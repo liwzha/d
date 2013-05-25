@@ -125,9 +125,7 @@ fprintf(stderr,"<<<[%s window] win_enqueue: inside win_enqueue\n",pt_win->win_ty
 	else if (pt_win->win_type == WIN_RECV)
         {
 	    fprintf(stderr, "[%s window] need to split packet -- seq # < upperband of window but seq# + datalen > upperband of window", pt_win->win_type == WIN_RECV?"recv":"send");
-	    int availableLen = win_get_last_num(pt_win) - seqNum + 1
-            pt_packet = split(pt_packet, availableLen,WIN_RECV);
-	    datalen = availableLen;
+           return -1;
         }
    }
 
