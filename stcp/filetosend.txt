@@ -1,0 +1,1794 @@
+\documentclass[11pt]{article}
+\usepackage{fullpage}
+\usepackage{titlesec}
+\usepackage{titletoc}
+\usepackage{fancybox}
+\usepackage{multirow}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{colortbl}
+\usepackage{rotating}
+\usepackage{verbatim}
+\usepackage{url}
+
+
+
+%opening
+\title{CMSC 23300/33300\\Networks and Distributed Systems}
+\author{Department of Computer Science\\University of Chicago}
+\date{}
+
+\setcounter{tocdepth}{1}
+
+\titlecontents{section}
+[1em]
+{\sffamily}
+{}
+{}
+{\titlerule*[0.5pc]{.}\contentspage\hspace*{1em}}
+\renewcommand\contentsname{Contents of this Document}
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+
+\begin{center}
+\begin{minipage}{0.6\textwidth}
+\begin{center}
+\emph{Winter 2012 Quarter}
+\end{center}
+\textbf{Dates:} January 3 -- March 6, 2011
+
+\textbf{Lectures:} TuTh 10:30-11:50 in Ryerson 251
+
+\textbf{Website:} \url{http://www.classes.cs.uchicago.edu/archive/2012/winter/23300-1/}
+\vspace{1em}
+
+\textbf{Lecturer:} Borja Sotomayor
+
+\textbf{E-mail:} borja@cs.uchicago.edu
+
+\textbf{Office:} Searle 209-A
+
+\textbf{Office hours:} Open door policy (see page \pageref{asking})
+
+\vspace{1em}
+
+\textbf{TA:} Soner Balkır
+
+\textbf{E-mail:} soner@cs.uchicago.edu
+
+\textbf{Office:} Jones 209
+
+\textbf{Office hours:} TBD
+\end{minipage}
+
+\end{center}
+
+\vspace{2ex}
+
+\titleformat{\section}[block]
+{\filcenter\normalfont\sffamily}
+{}{0em}{}
+
+\begin{center}
+\shadowbox{
+\begin{minipage}{0.6\textwidth}
+\tableofcontents
+\end{minipage}
+}
+\end{center}
+
+
+
+
+
+
+
+\titleformat{\section}[block]
+{\large\sffamily}
+{}{0em}{\titlerule\\\bfseries}
+
+\titleformat{\subsection}[block]
+{\normalfont\sffamily\bfseries}
+{}{0em}{}
+
+\pagebreak
+
+\section{Course description}
+
+This course focuses on the principles and techniques used in the development of networked and distributed software. Topics include programming with sockets; concurrent programming; data link layer (Ethernet, packet switching, etc.); internet and routing protocols (IP, IPv6, ARP, etc.); end-to-end protocols (UDP, TCP); and other commonly used network protocols and techniques.
+
+In this course, students will learn how to\ldots
+
+\begin{itemize}
+ \item[] \ldots implement multithreaded client/server applications using sockets.
+ \item[] \ldots interpret existing specifications of network protocols, and translate them into code.
+ \item[] \ldots design and combine network protocols that form the foundation of the Internet.
+ \item[] \ldots develop software collaboratively through the use of version control tools, code reviews, and project management.
+\end{itemize}
+
+CMSC 15400 and a working knowledge of the C programming language are strict prerequisites of this course. Students who have not taken CMSC 15400 must speak with the instructor to verify that they meet the prerequisites for this course.
+
+\section{Course organization}
+
+The development of three programming projects accounts for the majority of the grade in this course. To successfully complete these projects, students must understand fundamental concepts in networking. The class meets two times a week for lectures that provide this conceptual scaffolding, but will also cover material that is not directly applied in the projects. There will be a midterm and a final exam. The course calendar, including the contents of each lecture and project deadlines, is shown in Table~\ref{tab:calendar}.
+
+\subsection{Projects}
+
+Throughout the quarter, students will develop three projects:
+
+\begin{enumerate}
+ \item \textbf{IRC Server}: Implementing an Internet Relay Protocol (IRC) server (partially compliant with RFC 2810, 2811, 2812, and 2813) using POSIX sockets and pthreads.
+ \item \textbf{STCP}: Implementing a reliable transport protocol on top of an unreliable one.
+ \item \textbf{Routing}: Implementing an Internet router using Stanford's Virtual Network System.
+\end{enumerate}
+
+Each project is independent from the others. Students will develop these projects in pairs. Project groups must be formed by Friday, January 6. Groups can be changed from one project to another, but you must inform the instructor that you intend to do so. If your partner drops out of the course or you feel he/she is not contributing to the group's effort, you should make the instructor aware of this.
+
+\subsection{Graduate Project}
+
+Graduate students will also have to complete a research-oriented project divided into four stages. In this project, students will have to gather data and perform a series of experiments to empirically test a series of hypothesis (within the realm of Computer Networks). Students will peer-review these papers amongst themselves in a double-blind fashion, will have an opportunity to revise their papers based on the feedback they receive, and will finally present their results in a poster session.
+
+\subsection{Exams}
+
+There will be a midterm on Tuesday, February 7. This midterm will take place in class, and will only occupy the first 50 minutes of the lecture. The final exam is tentatively scheduled to take place during Finals Week, on March 13 from 10:30 to 12:30.
+
+Questions and exercises related to the projects will make up a substantial part of both exams. Students who have developed the projects on their own (which also requires understanding the material presented in class) should be able to answer these questions with relative ease. However, there will also be a question that are not related to the projects, but will be in line with the learning goals outlined at the beginning of this syllabus.
+
+
+\begin{sidewaystable}
+\sffamily
+\setlength{\extrarowheight}{4pt}
+\caption{CMSC 23300/33300 Spring 2011 Calendar}
+\begin{tabular}{|c|cc||p{8cm}|c|c|c|}
+\hline
+\textbf{Week} &  \multicolumn{2}{|c||}{\textbf{Date}} & \textbf{Lecture} & \textbf{Book} & \textbf{Project Due} & \textbf{Graduate Project} \\\hline
+
+\multirow{2}{*}{1}  & Tu & 3 January & Introduction                                    & 1 & \cellcolor[gray]{0.9}  & \cellcolor[gray]{0.9} \\\cline{2-6}
+                    & Th & 5 January & Sockets, Concurrent Programming                 & --- & \cellcolor[gray]{0.9}  & \cellcolor[gray]{0.9} \\\hline\hline
+
+\multirow{4}{*}{2}  & Tu & 10 January & Sockets, Concurrent Programming                & --- & Project 1a  & \cellcolor[gray]{0.9} \\\cline{2-6}
+                    & Th & 12 January & Link Layer                                     & 2, 3 & \cellcolor[gray]{0.9} & \cellcolor[gray]{0.9} \\\hline\hline
+
+\multirow{3}{*}{3}  & Tu & 17 January & Link Layer          & 2, 3 & \cellcolor[gray]{0.9}  & \cellcolor[gray]{0.9} \\\cline{2-6}
+                    & W & 18 January & \cellcolor[gray]{0.9} & \cellcolor[gray]{0.9} & \cellcolor[gray]{0.9} & \cellcolor[gray]{0.9} \\\cline{2-6}
+                    & Th & 19 January & IP          & 3 & \cellcolor[gray]{0.9}  & \cellcolor[gray]{0.9} \\\hline\hline
+
+\multirow{3}{*}{4}  & M & 23 January & \cellcolor[gray]{0.9} & \cellcolor[gray]{0.9} &  Project 1b & \cellcolor[gray]{0.9} \\\cline{2-6}
+                    & Tu & 24 January & IP             & 3 & \cellcolor[gray]{0.9}  & \cellcolor[gray]{0.9} \\\cline{2-6}
+                    & Th & 26 January & TCP/UDP                 & 5 & \cellcolor[gray]{0.9}  & \cellcolor[gray]{0.9} \\\hline\hline
+
+\multirow{3}{*}{5}  
+                    & Tu & 31 January & TCP/UDP                          & 5 & \cellcolor[gray]{0.9}  & \cellcolor[gray]{0.9} \\\cline{2-6}
+                    & Th & 2 February & TCP/UDP                              & 5 & \cellcolor[gray]{0.9}  & \cellcolor[gray]{0.9} \\\cline{2-6}
+                    & F & 3 February & \cellcolor[gray]{0.9} & \cellcolor[gray]{0.9} &  \cellcolor[gray]{0.9} & Paper Submission Due\\\hline\hline
+
+\multirow{4}{*}{6}  & M & 6 February & \cellcolor[gray]{0.9} & \cellcolor[gray]{0.9} &  Project 1c & \cellcolor[gray]{0.9} \\\cline{2-6}
+                    & Tu & 7 February  & Midterm.        & --- & \cellcolor[gray]{0.9}  & \cellcolor[gray]{0.9} \\\cline{2-6}
+                    & Th & 9 February  & Application Layer Protocols                         & 9 & \cellcolor[gray]{0.9}  & \cellcolor[gray]{0.9} \\\hline\hline
+
+\multirow{3}{*}{7}  & Tu & 14 February   & Routing Protocols, Congestion Control                                & 4, 6 & \cellcolor[gray]{0.9} & \cellcolor[gray]{0.9} \\\cline{2-6}
+                    & W & 15 February  & \cellcolor[gray]{0.9} & \cellcolor[gray]{0.9} & Project 2a & \cellcolor[gray]{0.9} \\\cline{2-6}
+                    & Thu & 16 February   & Routing Protocols, Congestion Control                                & 4, 6 & \cellcolor[gray]{0.9}  & \cellcolor[gray]{0.9} \\\hline\hline
+
+\multirow{3}{*}{8}  & M & 20 February    & \cellcolor[gray]{0.9} & \cellcolor[gray]{0.9} &  \cellcolor[gray]{0.9} & Reviews Due \\\cline{2-7}
+                    & Tu & 21 February   & Security                                & 8 & \cellcolor[gray]{0.9}  & \cellcolor[gray]{0.9} \\\cline{2-6}
+                    & W & 22 February  & \cellcolor[gray]{0.9} & \cellcolor[gray]{0.9} & Project 2b & \cellcolor[gray]{0.9} \\\cline{2-6}
+                    & Th & 23 February   & Security           & 8 & \cellcolor[gray]{0.9}  & \cellcolor[gray]{0.9} \\\hline\hline
+
+\multirow{2}{*}{9}  & Tu & 28 February   & Distributed Computing      & --- & \cellcolor[gray]{0.9}  & \cellcolor[gray]{0.9} \\\cline{2-6}
+                    & Th & 1 March   & Distributed Computing      & --- & \cellcolor[gray]{0.9}  & \cellcolor[gray]{0.9} \\\hline\hline
+
+\multirow{2}{*}{10} & M & 5 March    & \cellcolor[gray]{0.9} & \cellcolor[gray]{0.9} &  \cellcolor[gray]{0.9} & Revised Paper Due \\\cline{2-7}
+                    & Tu & 6 March   & Other Topics (TBD)                & ---  & \cellcolor[gray]{0.9}  & Poster Session \\\cline{2-7}
+                    & W &  7 March  & \cellcolor[gray]{0.9} & \cellcolor[gray]{0.9} &  Project 3 & \cellcolor[gray]{0.9} \\\hline
+\end{tabular}
+\label{tab:calendar}
+\end{sidewaystable}
+
+
+\section{Books}
+
+The \emph{suggested} text for this course is \emph{Computer Networks: A Systems Approach}, 5th edition, L. Peterson and B. Davie, Morgan Kaufmann 2012. Available for purchase from the Seminary Co-op Bookstore. 
+
+  
+\section{Grading}
+
+For undergraduates, the final grade will be based on the projects (60\%, each project worth 20\%), midterm (15\%), and final exam (25\%).
+
+For graduate students, the final grade will be based on the projects (40\%, each project worth $13.\overline{3}$\%), graduate project (20\%), midterm (15\%), and final exam (25\%).
+
+\subsection{Types of grades}
+
+Students may take this course for a quality grade (a ``letter'' grade) or a pass/fail grade. Students will declare on the final exam whether, depending on their final grade, they want to receive a letter grade, a pass/fail grade or withdraw from the course (a \emph{W} grade). For example, students can declare ``If my final grade is a C+ or lower, I will take a \emph{P} (Pass) instead of a letter grade and, if my grade is an \emph{F}, I wish to take a \emph{W}''. By default, all students are assumed to be taking the course for a quality grade.
+
+\begin{quote}
+Note: \emph{Students taking this course to meet general education requirements must take the course for a letter grade}. 
+\end{quote}
+
+
+\subsection{Late submissions}
+
+For the projects, the instructors will collect the latest revision each group commits to their GitHub repository before the deadline. Any work committed after the deadline is ignored and not collected. Each group is allowed four 24-hour extensions during the quarter. More than one extension can be applied to a single submission. i.e., a single 24-hour extension on four submissions, or a 96-hour extension on a single submission. No extensions will be allowed for the graduate project.
+
+If extraordinary circumstances (illness, family emergency, etc.) prevent a student from meeting a deadline, the student must inform the instructor \emph{before} the deadline.
+
+
+\section{Policy on academic honesty}
+
+The University of Chicago has a formal policy on academic honesty that you are expected to adhere to:
+
+\begin{center}
+\url{http://studentmanual.uchicago.edu/academic/index.shtml#honesty}
+\end{center}
+
+In brief, academic dishonesty (handing in someone else's work as your own, taking existing code and not citing its origin, etc.) will \emph{not} be tolerated in this course. Depending on the severity of the offense, you risk getting a hefty point penalty or being dismissed altogether from the course. All occurrences of academic dishonesty will furthermore be referred to the Dean of Students office, which may impose further penalties, including suspension and expulsion.
+
+Even so, collaboration between students is certainly allowed (and encouraged) \emph{as long as you don't hand someone else's work as your own}. If you have discussed parts of an assignment with someone else, then make sure to say so. If you consulted other sources, please make sure you cite these sources.
+
+If you have any questions regarding what would or would not be considered academic dishonesty in this course, please don't hesitate to ask the instructor.
+
+
+\section{Asking questions}
+\label{asking}
+
+This course has an \emph{open door policy} for asking questions. Instead of setting fixed office hours, you are welcome to consult with the instructor at any time. Nonetheless, you should try to give the instructor, whenever possible, some advance warning of your visit (by e-mail) to make sure that he will be in the office at that time.
+
+The preferred form of support for this course is though \emph{Piazza} (\url{http://www.piazza.com/}), an on-line discussion service which can be used to ask questions and share useful information with your classmates. Students will be enrolled in Piazza at the start of the quarter.
+
+All questions regarding the projects or material covered in class must be sent to Piazza, and not directly to the instructor or TA, as this allows your classmates to join in the discussion and benefit from the replies to your question. This rule will be applied strictly: if you send a message directly to the instructor or the TAs, you will only get a reply telling you to send your question to Piazza. The only exception to this rule is if your question requires revealing part of your solution to a project; in that case, please send an e-mail to the following address:
+
+\begin{center}
+\url{cmsc23300-instructors@cs.uchicago.edu}
+\end{center}
+
+This address reaches both the instructor and the TAs.
+
+
+\section{Acknowledgements}
+
+This syllabus is based on previous CMSC 23300/33300 syllabi developed by Prof. Anne Rogers and Prof. Ian Foster from the University of Chicago.
+
+\end{document}
+/*
+ * client.c 
+ *
+ *
+ * This file contains the client application. In the interactive
+ * mode, it waits for the user
+ * to type the name of a file. This filename is sent to the running 
+ * server which then replies with the contents of the file. In the 
+ * non-iteractive mode (when the option '-f' is specified along with
+ * a filename) it simply asks for that file from the server and exits.
+ * 
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <string.h>
+#include <errno.h>
+#ifdef LINUX
+#include <unistd.h> /*getopt*/
+#endif
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+
+#include "mysock.h"
+
+
+
+/* Every received file is stored with this filename */
+#define RCVD_FILENAME "rcvd"
+
+#ifndef MIN
+#define MIN(a,b) ((a) < (b) ? (a) : (b))
+#endif
+
+static char usage[] = "usage: client [-U] [-q] [-f <filename>] server:port\n";
+static char *filename;
+static int quiet_opt = 0;
+
+static int parse_address(char *address, struct sockaddr_in *sin);
+static int get_nvt_line(int sd, char *line);
+static void loop_until_end(int sd);
+
+
+/**********************************************************************/
+int
+main(int argc, char *argv[])
+{
+    struct sockaddr_in sin;
+    char opt;
+    char *pline;
+    char reliable = 1;
+    int errflg = 0;
+    int sd;
+
+
+
+    filename = NULL;
+    /* Parse command line options */
+    while ((opt = getopt(argc, argv, "f:qU")) != EOF)
+    {
+        switch (opt)
+        {
+        case 'f':
+            filename = optarg;
+            break;
+        case 'q':
+            ++quiet_opt;
+            break;
+
+        case 'U':
+            reliable = 0;
+            break;
+
+        case '?':
+            ++errflg;
+            break;
+        }
+    }
+
+    if (errflg || optind != argc - 1)
+    {
+        fputs(usage, stderr);
+        exit(1);
+    }
+
+        pline = argv[optind];
+
+    if (parse_address(pline, &sin) < 0)
+    {
+        perror("parse_address");
+        exit(1);
+    }
+
+    if (!sin.sin_port)
+    {
+        fprintf(stderr, "Format is %s server:port\n", argv[0]);
+        exit(1);
+    }
+
+    if ((sd = mysocket(reliable)) < 0)
+    {
+        perror("mysocket");
+        exit(1);
+    }
+
+    sd = myconnect(sd, (struct sockaddr *) &sin, sizeof(struct sockaddr_in));
+    if (sd < 0)
+    {
+        perror("myconnect");
+        exit(1);
+    }
+
+    loop_until_end(sd);
+
+    if (myclose(sd) < 0)
+    {
+        perror("myclose");
+    }
+
+    return 0;
+}                               /* end main() */
+
+
+/**********************************************************************/
+/* loop_until_end
+ * 
+ * Loop until the connection has closed
+ */
+void
+loop_until_end(int sd)
+{
+    int errcnd;
+    char line[1000];
+    int length, to_read;
+    char *pline, *lenstr, *resp;
+    int got;
+    FILE *file;
+
+    for (;;)
+    {
+
+        errcnd = 0;
+        if (filename == NULL)
+        {
+            /* Prompt for a request to the server (a filename) */
+            printf("\nclient> ");
+            fflush(stdout);
+            if (!fgets(line, sizeof(line), stdin))
+                break;
+
+            /* Remove trailing spaces and add CRLF at the end */
+            pline = line + strlen(line) - 1;
+            while ((pline > line - 1) && isspace((int) (*pline)))
+                --pline;
+
+            if (pline <= line)
+                continue;
+        }
+        else
+        {
+            strcpy(line, filename);
+            pline = line + strlen(line) - 1;
+        }
+        *++pline = '\r';
+        *++pline = '\n';
+        *++pline = '\0';
+
+        if (mywrite(sd, line, pline - line) < 0)
+        {
+            perror("mywrite");
+            errcnd = 1;
+            break;
+        }
+
+        if (get_nvt_line(sd, line) < 0)
+        {
+            perror("get_nvt_line");
+            errcnd = 1;
+            break;
+        }
+
+        printf("server: %s\n", line);
+        fflush(stdout);
+
+        /* Parse the response from the server */
+        if (NULL == (resp = strrchr(line, ',')))
+        {
+            fprintf(stderr, "Malformed response from server.\n");
+            errcnd = 1;
+            break;
+        }
+        *resp++ = '\0';
+
+        if (NULL == (lenstr = strrchr(line, ',')))
+        {
+            fprintf(stderr, "Malformed response from server.\n");
+            errcnd = 1;
+            break;
+        }
+        *lenstr++ = '\0';
+
+
+        sscanf(lenstr, "%d", &length);
+        if (length == -1)
+        {
+            /* Error reported from server */
+            if (filename == NULL)
+                continue;
+            else
+            {
+                errcnd = 1;
+                break;
+            }
+
+        }
+        if ((file = fopen(RCVD_FILENAME, "w")) == NULL)
+        {
+            perror("file_to_write error");
+            errcnd = 1;
+            break;
+        }
+        /* Retrieve the remote file and write it to a local file */
+        while (length)
+        {
+            to_read = MIN(length, (int) sizeof(line));
+
+            if ((got = myread(sd, line, to_read)) < 0)
+            {
+                perror("myread");
+                errcnd = 1;
+                break;
+            }
+
+            if (!got)
+            {
+                break;
+            }
+
+            if (got < to_read)
+            {
+                to_read = got;
+            }
+
+            if (!quiet_opt)
+            {
+                while (0 == fwrite(line, 1, to_read, file))
+                {
+                    if (errno != EINTR)
+                    {
+                        perror("fwrite");
+                        errcnd = 1;
+                        break;
+                    }
+                }
+            }
+            length -= to_read;
+        }
+
+        if (length)
+        {
+            fprintf(stderr,
+                    "Exiting: read bad number of bytes (%d less than expected)...\n",
+                    length);
+            fclose(file);
+            myclose(sd);
+            exit(-1);
+        }
+
+        fclose(file);
+        if (filename != NULL)
+            break;
+
+    }                           /* end for(;;) */
+}
+
+/**********************************************************************/
+/* parse_address
+ *
+ * Get the address and write it in the appropiate format to "sin"
+ */
+int
+parse_address(char *address, struct sockaddr_in *sin)
+{
+    char *address_copy = NULL;
+    char *pc;
+    unsigned h_port;
+    int rc = -1;
+    struct hostent *he;
+
+    if (NULL == (address_copy = strdup(address)))
+        goto cleanup;
+
+    memset(sin, 0, sizeof(*sin));
+    sin->sin_family = AF_INET;
+
+    if (NULL == (pc = strchr(address_copy, ':')))
+    {
+        sin->sin_port = 0;
+    }
+    else
+    {
+        if (1 != sscanf(pc + 1, "%u", &h_port))
+        {
+            errno = EINVAL;
+            goto cleanup;
+        }
+
+        sin->sin_port = htons(h_port);
+        *pc = '\0';
+    }
+
+    if ((in_addr_t) - 1 == (sin->sin_addr.s_addr = inet_addr(address_copy)))
+    {
+        if (NULL == (he = gethostbyname(address_copy)) ||
+            he->h_addrtype != AF_INET || he->h_length != 4)
+        {
+            errno = EADDRNOTAVAIL;
+            goto cleanup;
+        }
+
+        memcpy((char *) &sin->sin_addr, he->h_addr, sizeof(sin->sin_addr));
+    }
+
+    rc = 0;
+
+cleanup:
+    if (address_copy)
+        free(address_copy);
+
+    return rc;
+}
+
+/**********************************************************************/
+/* get_nvt_line
+ * 
+ * Retrieves the next line of NVT ASCII from mysocket layer.
+ *
+ * Returns 
+ *  0 on success
+ *  -1 on failure
+ */
+static int
+get_nvt_line(int sd, char *line)
+{
+    char last_char;
+    char this_char;
+    int len;
+
+    last_char = '\0';
+    for (;;)
+    {
+        len = myread(sd, &this_char, sizeof(this_char));
+        if (len < 0)
+            return -1;
+
+        if (len == 0)
+        {
+            /* Connection ended before line terminator (or empty string) */
+            *line = '\0';
+            return 0;
+        }
+    /** fprintf(stderr, "read character %c\n", this_char); **/
+
+        if (last_char == '\r' && this_char == '\n')
+        {
+            /* Reached the end of line. Already wrote \r into string, overwrite
+             * it with a NUL */
+            line[-1] = '\0';
+            return 0;
+        }
+
+        *line++ = this_char;
+        last_char = this_char;
+    }
+}
+/*
+ * server.c 
+ *
+ * This file contains the server application. It simply waits for the 
+ * client to send it something, which it interprets as the name of some
+ * file. It then sends an OK to the client (if it can access the requested
+ * file) and finally sends the file.
+ * 
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdarg.h>
+#include <string.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <errno.h>
+#include <assert.h>
+
+#include "mysock.h"
+
+
+
+static char usage[] = "usage: %s [-U]\n";
+
+static void do_connection(mysocket_t bindsd);
+static int get_nvt_line(int sd, char *);
+static int process_line(int sd, char *);
+static int local_name(mysocket_t sd, char *name);
+
+/**********************************************************************/
+int
+main(int argc, char *argv[])
+{
+    struct sockaddr_in sin;
+    mysocket_t bindsd;
+    int len, opt, errflg = 0;
+    char localname[256];
+    bool_t reliable = TRUE;
+
+
+    /* Parse the command line */
+    while ((opt = getopt(argc, argv, "U")) != EOF)
+    {
+        switch (opt)
+        {
+        case 'U':
+            reliable = FALSE;
+            break;
+        case '?':
+            ++errflg;
+            break;
+        }
+    }
+
+    if (errflg || optind != argc)
+    {
+        fprintf(stderr, usage, argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
+    /* open connection on any available port */
+    if ((bindsd = mysocket(reliable)) < 0)
+    {
+        perror("mysocket");
+        exit(EXIT_FAILURE);
+    }
+
+    memset(&sin, 0, sizeof(sin));
+    sin.sin_family = AF_INET;
+    sin.sin_addr.s_addr = htonl(INADDR_ANY);
+    sin.sin_port = htons(0);
+    len = sizeof(struct sockaddr_in);
+
+    if (mybind(bindsd, (struct sockaddr *) &sin, len) < 0)
+    {
+        perror("mybind");
+        exit(EXIT_FAILURE);
+    }
+
+    if (mylisten(bindsd, 5) < 0)
+    {
+        perror("mylisten");
+        exit(EXIT_FAILURE);
+    }
+    if (local_name(bindsd, localname) < 0)
+    {
+        perror("local_name");
+        exit(EXIT_FAILURE);
+    }
+        fprintf(stderr, "Server's address is %s\n", localname);
+        fflush(stderr);
+
+    for (;;)
+    {
+        mysocket_t sd;
+
+        /* just keep accepting connections forever */
+        if ((sd = myaccept(bindsd, (struct sockaddr *) &sin, &len)) < 0)
+        {
+            perror("myaccept");
+            exit(EXIT_FAILURE);
+        }
+
+        assert(sin.sin_family == AF_INET);
+        fprintf(stderr, "connected to %s at port %u\n",
+                inet_ntoa(sin.sin_addr), ntohs(sin.sin_port));
+
+        do_connection(sd);
+    }                           /* end for(;;) */
+
+    if (myclose(bindsd) < 0)
+        perror("myclose (bindsd)");
+    return 0;
+}
+
+/* process a single client connection */
+static void do_connection(mysocket_t sd)
+{
+    char line[256];
+    int rc;
+
+
+    /* loop over: 
+       - get a request from the client
+       - process the request
+     */
+
+    for (;;)
+    {
+        rc = get_nvt_line(sd, line);
+        if (rc < 0 || !*line)
+            goto done;
+        fprintf(stderr, "client: %s\n", line);
+
+        if (process_line(sd, line) < 0)
+        {
+            perror("process_line");
+            goto done;
+        }
+    }   /* for (;;) */
+
+done:
+    if (myclose(sd) < 0)
+    {
+        perror("myclose (sd)");
+    }
+}
+
+
+/**********************************************************************/
+/* get_nvt_line
+ * 
+ * Retrieves the next line of NVT ASCII from mysocket layer.
+ *
+ * Returns 
+ *  0 on success
+ *  -1 on failure
+ */
+static int
+get_nvt_line(int sd, char *line)
+{
+    char last_char;
+    char this_char;
+    int len;
+
+    last_char = '\0';
+    for (;;)
+    {
+        len = myread(sd, &this_char, sizeof(this_char));
+        if (len < 0)
+            return -1;
+
+        if (len == 0)
+        {
+            /* Connection ended before line terminator (or empty string) */
+            *line = '\0';
+            return 0;
+        }
+    /** fprintf(stderr, "read character %c\n", this_char); **/
+        if (last_char == '\r' && this_char == '\n')
+        {
+            /* Reached the end of line. Already wrote \r into string, overwrite
+             * it with a NUL */
+            line[-1] = '\0';
+            return 0;
+        }
+
+        *line++ = this_char;
+        last_char = this_char;
+    }
+    return -1;
+}
+
+/**********************************************************************/
+/* process_line
+ * 
+ * Process the request (a filename) from the client. Send back the
+ * response and then the content of the requested file through
+ * mysocket layer.
+ *
+ * Returns 
+ *  0 on success
+ *  -1 on failure
+ */
+static int
+process_line(int sd, char *line)
+{
+    char resp[5000];
+    int fd = -1, length;
+
+    if (!*line || access(line, R_OK) < 0)
+    {
+        sprintf(resp, "%s,-1,File does not exist or access denied\r\n", line);
+    }
+    else
+    {
+        if ((fd = open(line, O_RDONLY)) < 0)
+        {
+            sprintf(resp, "%s,-1,File could not be opened\r\n", line);
+        }
+        else
+        {
+            sprintf(resp, "%s,%lu,Ok\r\n", line, lseek(fd, 0, SEEK_END));
+            lseek(fd, 0, SEEK_SET);
+        }
+    }
+  /** fprintf(stderr, "sending to client: %s of length %d bytes\n", resp, strlen(resp)); **/
+    /* Return the response to the client */
+    if (mywrite(sd, resp, strlen(resp)) < 0)
+    {
+        if (fd != -1)
+            close(fd);
+        return -1;
+    }
+
+    if (fd == -1)
+        return 0;
+
+    for (;;)
+    {
+        length = read(fd, resp, sizeof(resp));
+        if (length == 0)
+            break;
+
+        if (length == -1)
+        {
+            perror("read");
+            close(fd);
+            return -1;
+        }
+
+        /* fwrite(resp, length, 1, stdout); */
+
+        if (mywrite(sd, resp, length) < 0)
+        {
+            close(fd);
+            return -1;
+        }
+    }
+
+    close(fd);
+    return 0;
+}
+
+/* local_name()
+ *
+ * Takes in a mysocket descriptor and finds the (local_addr, local_port)
+ * associated with sd. It places into name a string of the form
+ * "hostname:portname"; name must have memory allocated already.
+ *
+ * XXX: This is broken on multi-homed hosts (e.g. VNS).
+ *
+ * Returns 0 on success and -1 on failure.
+ */
+
+static int local_name(mysocket_t sd, char *name)
+{
+#define MAX_HOSTNAMELEN 100
+
+    struct sockaddr_in sin;
+    socklen_t sin_len = sizeof(sin);
+    char myhostname[MAX_HOSTNAMELEN];
+
+    assert(name);
+
+    /* get local port associated with the mysocket */
+    if (mygetsockname(sd, (struct sockaddr *) &sin, &sin_len) < 0)
+    {
+        assert(0);
+        return -1;
+    }
+
+    /* get name of current host */
+    if (gethostname(myhostname, sizeof(myhostname)) < 0)
+    {
+        assert(0);
+        return -1;
+    }
+
+    sprintf(name, "%s:%u", myhostname, ntohs(sin.sin_port));
+    return 0;
+}
+
+#include"window.h"
+/*
+void win_init( window * pt_win ){
+pt_win->win_type = WIN_UNDEF;
+win_firstNum = -1;
+win_buf = NULL;
+}
+*/
+void win_init( window * pt_win, enum window_type wt, context_t* ctx){
+    pt_win->win_type = wt;
+    pt_win->win_ctx = ctx;
+    pt_win->win_buf = NULL;
+}
+
+int get_seq_number( const struct packet * pt_packet ){
+    return pt_packet->pa_header.th_seq;
+}
+
+int get_ack_number( const struct packet * pt_packet ){
+    return pt_packet->pa_header.th_ack;
+}
+
+/* return number of packets in the buf */
+int win_getsize( window * pt_win ){
+    window_node * p_wn = pt_win->win_buf;
+    int counter = 0;
+    while( p_wn != NULL ){
+        p_wn = p_wn->wn_next;
+        counter ++;
+    }
+    return counter;
+}
+
+/* return the first seq number of packet in the window or, seq number of next packet to receive */
+int win_get_first_num( window * pt_win ){
+    if (pt_win->win_type == WIN_RECV)
+        return pt_win->win_ctx->ack_passive;
+    if (pt_win->win_type == WIN_SEND){
+        return pt_win->win_ctx->ack_active;
+    }
+}
+
+/* return the largest possible seq number of packet in the window / of packet to receive */
+int win_get_last_num( window * pt_win ){
+    return win_get_first_num(pt_win) + 3072 - 1; /* TODO save window size--3072 as variable*/
+}
+
+/* construct a window_node for the packet and insert it between the owner of (pt_next_wn) and the node pointed by *pt_next_wn */
+void wn_con( const struct packet * pt_packet, int datalen, window_node ** pt_next_wn ){
+fprintf(stderr,">>>window_node:inside window_node \n");
+    int n, ret;
+    unsigned int mask=0;
+    window_node * pt_wn = malloc(sizeof(window_node));
+    
+    pt_wn->wn_packet = pt_packet;
+    pt_wn->wn_next = (*pt_next_wn);
+    pt_wn->wn_datalen = datalen;
+    gettimeofday(&pt_wn->wn_sendtime ,NULL);
+    (*pt_next_wn) = pt_wn;
+    pt_wn->wn_retransmitcnt = 0;
+fprintf(stderr,"<<<<window_node:exiting window_node %d %d\n",
+              pt_wn->wn_sendtime.tv_sec,
+              pt_wn->wn_sendtime.tv_usec);
+}
+
+/* remove packets from buf.
+send ack at the same time if it's a recv window. */
+void win_dequeue( window * pt_win ){
+    if(pt_win->win_buf == NULL) return;
+fprintf(stderr,">>>%s win_dequeue: inside win_dequeue, num of packets in buf: %d, first num: %d\n", pt_win->win_type==WIN_RECV?"recv":"send", win_getsize(pt_win), win_get_first_num(pt_win));
+    window_node ** p_pt_wn = (&pt_win->win_buf);
+    window_node * pt_wn_tmp;
+fprintf(stderr,"...before while, win seq num:%d, packet's seq num:%d\n",win_get_first_num(pt_win),get_seq_number((*p_pt_wn)->wn_packet));
+    while( (*p_pt_wn) != NULL &&
+       win_get_first_num(pt_win) >= get_seq_number( (*p_pt_wn)->wn_packet)){
+       /* if this is a recv window, send data to app and ack */
+       if (pt_win->win_type == WIN_RECV){
+           /* send ack for this packet */
+           /* TODO need to change this for part b */
+           struct packet pa;
+           int ackloc = get_seq_number((*p_pt_wn)->wn_packet)+(*p_pt_wn)->wn_datalen;
+           fill_header(&(pa.pa_header), 0, ackloc, TH_ACK, 0);
+           send_packet(pt_win->win_ctx, &pa, 0, 1);
+fprintf(stderr,"ack sent, ack #: %d\n", ackloc);
+           /* change context */
+           (pt_win)->win_ctx->ack_passive = ackloc;
+           /* send data to app */
+           send_packet((pt_win)->win_ctx, (*p_pt_wn)->wn_packet,(*p_pt_wn)->wn_datalen ,0);
+       }
+
+
+       /* if this is a send window, just dequeue the acked packets from the front of the window*/
+pt_wn_tmp = (*p_pt_wn);
+       (*p_pt_wn) = pt_wn_tmp->wn_next;
+       free( pt_wn_tmp );
+    }
+
+fprintf(stderr,">>>win_dequeue: about to return, packets in the buf %d\n",win_getsize(pt_win));
+}
+
+/* for send window, send out the packet and enqueue.
+for recv window, just enqueue.
+*/
+int win_enqueue( window * pt_win, const struct packet * pt_packet, int datalen ){
+fprintf(stderr,"<<<%s win_enqueue: inside win_enqueue\n",pt_win->win_type==WIN_RECV?"recv":"send");
+   int seqNum;
+   window_node ** pt_next_wn;
+fprintf(stderr,"before get seq number\n");
+   seqNum = get_seq_number( pt_packet );
+fprintf(stderr,"after get seq number\n");
+   
+   if ( seqNum < win_get_first_num( pt_win ) ){
+       fprintf(stderr,"[%s window] rejecting a packet -- seq # too low\n",pt_win->win_type==WIN_RECV?"recv":"send") ;
+       return -1;
+   }
+/* TODO: for sending window, should not just reject the packet */
+   if ( seqNum+datalen-1 > win_get_last_num( pt_win ) ){
+       fprintf(stderr,"[%s window] rejecting a packet -- seq # too high\n",pt_win->win_type==WIN_RECV?"recv":"send");
+       if (pt_win->win_type == WIN_RECV)
+           return -1;
+   }
+
+   /* iterate through packets in the buf list.
+insert the new packet in the list so that the seq numbers of packets
+in the list are kept in increasing order. */
+   for (pt_next_wn = &(pt_win->win_buf) ;
+       (*pt_next_wn) != NULL && seqNum > get_seq_number( (*pt_next_wn)->wn_packet ) ;
+       pt_next_wn = &((*pt_next_wn)->wn_next) ) ;
+   wn_con( pt_packet, datalen, pt_next_wn );
+
+   /* if this is a send window, send the packet to newtork layer.
+increment seq_active.
+*/
+   if (pt_win->win_type == WIN_SEND){
+fprintf(stderr,"this is a send window, about to call send_packet\n");
+       send_packet(pt_win->win_ctx, pt_packet, datalen,1);
+       pt_win->win_ctx->seq_active += datalen;
+   }
+ 
+fprintf(stderr,"<<<win_enqueue: about to return, packets in the buf: %d\n",win_getsize(pt_win));
+   return 1;
+}
+
+int wn_get_packet_size( window_node * p_wn ){
+    return sizeof(struct tcphdr) + p_wn->wn_datalen;
+}
+
+window_node * win_get_last_node( window * pt_win ){
+   window_node * pt_wn = pt_win->win_buf;
+   while (pt_wn != NULL && pt_wn->wn_next != NULL){
+       pt_wn = pt_wn->wn_next;  
+   }
+   return pt_wn;
+}
+
+int win_isfull( window * pt_win ){
+    window_node * pt_wn = win_get_last_node( pt_win );
+    if (pt_wn == NULL)
+        return 0;
+    if (pt_wn->wn_datalen + get_seq_number(pt_wn->wn_packet) > win_get_last_num( pt_win))
+        return 1;
+
+    return 0;
+}
+
+
+/*
+ * transport.c 
+ *
+ * CS244a HW#3 (Reliable Transport)
+ *
+ * This file implements the STCP layer that sits between the
+ * mysocket and network layers. You are required to fill in the STCP
+ * functionality in this file. 
+ *
+ */
+
+
+#include <stdio.h>
+#include <stdarg.h>
+#include <string.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <time.h>
+#include "mysock.h"
+#include "stcp_api.h"
+#include "transport.h"
+#include "window.h"
+
+enum {CSTATE_ESTABLISHED,
+    CSTATE_CLOSED,
+    CSTATE_SYN_RCVD,
+    CSTATE_SYNACK_RCVD,
+    CSTATE_CLOSE_WAIT,
+    CSTATE_LAST_ACK,
+    CSTATE_TIME_WAIT
+    };    /* obviously you should have more states */
+/*
+struct packet
+{
+    struct tcphdr pa_header; 
+#define MAX_PACKET_SIZE 536
+    char data[MAX_PACKET_SIZE];
+};
+*/
+
+
+static void generate_initial_seq_num(context_t *ctx);
+static void control_loop(mysocket_t sd, context_t *ctx);
+
+int fill_header(STCPHeader *pheader, int seqNum, int ackNum, int flag, int dataLen){
+
+    pheader->th_seq = seqNum;
+    pheader->th_ack = ackNum;
+    pheader->th_flags = flag;
+    pheader->th_off = sizeof( struct tcphdr );
+
+    return sizeof( struct tcphdr ) + dataLen;
+}
+
+
+int wait_recv(mysocket_t sd, struct packet *p, int expected, int msec, int realrecv)
+{
+fprintf(stderr,"[wait_recv] inside wait_recv, msec = %d\n",msec);
+    struct timespec *ts = (struct timespec *)malloc(sizeof(struct timespec));
+    int n, ret;
+    unsigned int mask=0;
+    if(msec == 0) ts = NULL;
+    else {
+        /* (*ts) = time(NULL); */
+        time(&(ts->tv_sec));
+        ts->tv_sec += msec/1000;
+        ts->tv_nsec = 5000;
+    }
+
+fprintf(stderr,"[wait_recv] about to call stcp_wait_for_event\n");
+    mask = stcp_wait_for_event(sd, APP_DATA | NETWORK_DATA, ts);/* debugging */
+fprintf(stderr,"[wait_recv] returned from stcp_wait_for_event\n");
+    if (mask == TIMEOUT) {
+          ret = -1;
+          printf("wait_recv: timeout\n");
+    }
+    else if (expected >= 0 && (mask & NETWORK_DATA)) { /*receive from network*/
+fprintf(stderr,"[wait_recv] receive from network\n");
+        n = stcp_network_recv(sd, (char *)p, sizeof(struct packet));
+        printf("wait_recv got %d bytes from network, flag: %d / %d\n", n, p->pa_header.th_flags, expected);
+        if(p->pa_header.th_flags == expected)
+            ret = 0;
+        else
+            ret = -1;
+    }
+    else if (expected < 0 && (mask & APP_DATA)) { /*receive from app*/
+fprintf(stderr,"[wait_recv] receive from app\n");
+        n = stcp_app_recv(sd, p->data, 536);
+        printf("wait_recv got %d bytes from app \n", n);
+        if (n>0)
+            ret = 0;
+        else
+            ret = -1; 
+    }
+   
+    free(ts);
+
+fprintf(stderr,"[wait_recv] about to return, return %d, expected:%d \n", ret,expected);
+    return ret;
+}
+
+/* dummy function for compilation.  TODO delete this function?  */
+void dump_packet(struct packet *p){
+    return;
+}
+
+/* dummy function for compilation.  TODO modify / delete this function? */
+static void exit_control_loop(context_t *ctx, int reason)
+{
+    /* ctx->control_loop_not_running = reason; */
+    /* TODO */
+    transport_passive_close(ctx);
+}
+
+
+/* initialise the transport layer, and start the main loop, handling
+ * any data from the peer or the application.  this function should not
+ * return until the connection is closed.
+ */
+void transport_init(mysocket_t sd, bool_t is_active)
+{
+fprintf(stderr, "[transport_init] inside transport_init\n");
+    context_t *ctx;
+    struct packet *packet = malloc(sizeof(struct packet));
+    struct tcphdr *hdr = malloc(sizeof(struct tcphdr));
+    int packetlen, sent, peerlen;
+
+    ctx = (context_t *) calloc(1, sizeof(context_t));
+    assert(ctx);
+    ctx->connection_state = CSTATE_CLOSED;
+    ctx->sockfd = sd;
+    ctx->cong_estrtt = 100000;
+
+    srand(time(NULL));
+    generate_initial_seq_num(ctx);
+
+    /* XXX: you should send a SYN packet here if is_active, or wait for one
+     * to arrive if !is_active.  after the handshake completes, unblock the
+     * application with stcp_unblock_application(sd).  you may also use
+     * this to communicate an error condition back to the application, e.g.
+     * if connection fails; to do so, just set errno appropriately (e.g. to
+     * ECONNREFUSED, etc.) before calling the function.
+     */
+    ctx->seq_active = ctx->initial_sequence_num;
+    if(is_active == 1) /* active mode */
+    {
+        while(ctx->connection_state != CSTATE_ESTABLISHED)
+     {
+        fprintf(stderr, "[transport_init] is_active == True \n");
+        memset((void *)hdr, 0, sizeof(struct tcphdr));
+        memset((void *)packet, 0, sizeof(struct packet));
+        switch (ctx->connection_state)
+         {
+            case CSTATE_CLOSED:
+                printf("active client:CLOSED\n");
+                /* send SYN */
+                packetlen = fill_header(&(packet->pa_header),ctx->seq_active,0,TH_SYN, 0);
+                /* packet->pa_header = *hdr; */
+                /* dump_packet(packet) */
+                sent = stcp_network_send(sd,(char *)packet, packetlen,NULL);
+                if(sent == -1) perror("network_send");
+                struct timeval sendtime;
+		gettimeofday(&sendtime, NULL);
+		printf("network_send: %d bytes\n", sent);
+                printf("active child: SYN_SENT\n");
+
+                /* recv SYNACK */
+                if(wait_recv(sd, packet, TH_SYN | TH_ACK, 0, 1) == 0)
+                {
+		    estimate_rtt(ctx,sendtime);
+                    ctx->ack_active = packet->pa_header.th_ack;
+                    ctx->seq_passive = packet->pa_header.th_seq;
+                    ctx->ack_passive = packet->pa_header.th_seq + 1;
+                    ctx->connection_state = CSTATE_SYNACK_RCVD;
+                }
+                else
+                {
+                    ctx->connection_state = CSTATE_CLOSED;
+                }
+                break;
+
+            case CSTATE_SYNACK_RCVD:
+                dprintf("active child: SYNACK_RCVD\n");
+/* send ACK */
+                packetlen = fill_header(hdr, 0, ctx->ack_passive, TH_ACK, 0);
+                packet->pa_header = *hdr;
+                /*dump_packet(packet);*/
+                sent = stcp_network_send(sd, (char *)packet, packetlen, NULL);
+        fprintf(stderr,"ACK sent\n");
+                /*debug("network_send: %d bytes\n", sent);*/
+                if(sent == -1) perror("network_send");
+                /* if recv SYNACK again  */
+                if(wait_recv(sd, packet, TH_SYNACK, 1000, 1) == 0) {
+                    ctx->connection_state = CSTATE_SYNACK_RCVD;
+                }
+                else 
+		{
+		estimate_rtt(ctx, packet->pa_header.th_seq);
+		ctx->connection_state = CSTATE_ESTABLISHED;
+		printf("Established!\n");
+		}
+                break;
+
+            default:
+                break;
+        }
+     }
+    }
+
+    else
+    {/* Passive mode */
+        while(ctx->connection_state != CSTATE_ESTABLISHED)
+        {
+            memset((void *)hdr, 0, sizeof(struct tcphdr));
+            memset((void *)packet, 0, sizeof(struct packet));
+            switch(ctx->connection_state)
+           {
+                case CSTATE_CLOSED:
+                    printf("passive child: CLOSED\n");
+                    /* wait for SYN */
+                    if(wait_recv(sd, packet, TH_SYN, 0, 1) == 0)
+                    {
+                        ctx->seq_passive = packet->pa_header.th_seq;
+                        ctx->ack_passive = packet->pa_header.th_seq + 1;
+                        ctx->connection_state = CSTATE_SYN_RCVD;
+                    }
+                    else continue;
+                    break;
+                case CSTATE_SYN_RCVD:
+                    printf("passive child: SYN RCVD\n");
+                    /* send SYNACK */
+                    packetlen = fill_header(hdr, ctx->seq_active, ctx->ack_passive, TH_SYN | TH_ACK, 0);
+                    packet->pa_header = *hdr;
+                    /* dump_packet(packet); */
+                    sent = stcp_network_send(sd, (char *)packet, packetlen, NULL);
+		    fprintf(stderr,"SYNACK sent\n");
+	            struct timeval sendtime;
+		    gettimeofday(&sendtime,NULL);
+                    printf("network_send:%d bytes\n", sent);
+                    if(sent == -1) perror("network_send");
+                    /* recv ACK */
+                    if(wait_recv(sd, packet, TH_ACK, 0, 1) == 0)
+                    {
+			estimate_rtt(ctx, sendtime);
+                        ctx->ack_active = packet->pa_header.th_ack;
+                        ctx->connection_state = CSTATE_ESTABLISHED;
+                        printf("Established!!!\n");
+                        break;
+                    }
+
+                    else
+                        ctx->connection_state=CSTATE_SYN_RCVD;
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    ctx->seq_active++;
+    ctx->seq_passive++;
+    printf("SYN handshaking passed\n");
+
+    printf("@@@ seq/ack active: %d %d \n", ctx->seq_active, ctx->ack_active);
+    printf("@@@ seq/ack passive: %d %d \n", ctx->seq_passive, ctx->ack_passive);
+
+    free(hdr);
+    free(packet);
+
+
+
+
+    ctx->connection_state = CSTATE_ESTABLISHED;
+    stcp_unblock_application(sd);
+
+    control_loop(sd, ctx);
+
+    /* do any cleanup here */
+    free(ctx);
+}
+
+/**********************************************************************/
+/* transport_active_close
+ *
+ * Called from child process at transport_appl_io()
+ */
+int transport_active_close(context_t *ctx)
+{
+    int packetlen;
+    struct tcphdr *hdr = (struct tcphdr *)malloc(sizeof(struct tcphdr));
+    struct packet *packet = (struct packet *)malloc(sizeof(struct packet));
+
+    /* close(ctx->local_data_sd); */
+    close(ctx->sockfd);
+    printf("transport_active_close()\n");
+    while(ctx->connection_state!=CSTATE_CLOSED)
+    {
+
+
+
+        memset((void *)hdr, 0, sizeof(struct tcphdr));
+        memset((void *)packet, 0, sizeof(struct packet));
+
+        switch(ctx->connection_state) {
+            case CSTATE_ESTABLISHED:
+                printf("active child: ESTABLISHED\n");
+                /* send FIN */
+                packetlen = fill_header(hdr, ctx->seq_active, 0, TH_FIN, 0);
+                packet->pa_header = *hdr;
+                dump_packet(packet);
+                if(stcp_network_send(ctx->sockfd, (char *)packet, packetlen, NULL) == -1)
+                    perror("network_send");
+                /* recv FINACK */
+                if(wait_recv(ctx->sockfd, packet, TH_FIN | TH_ACK, 0, 1) == 0) {
+                    ctx->ack_active = packet->pa_header.th_ack;
+                    ctx->ack_passive = packet->pa_header.th_seq + 1;
+                    ctx->connection_state = CSTATE_TIME_WAIT;
+                }
+                else {
+                    ctx->connection_state = CSTATE_ESTABLISHED;
+                }
+                break;
+            case CSTATE_TIME_WAIT:
+                printf("active child: TIME_WAIT\n");
+                /* send ACK */
+                packetlen = fill_header(hdr, 0, ctx->ack_passive, TH_ACK, 0);
+                packet->pa_header = *hdr;
+                dump_packet(packet);
+                if(stcp_network_send(ctx->sockfd, (char *)packet, packetlen, NULL) == -1)
+                    perror("network_send");
+                printf("Send ACK Finished\n");
+               /* if recv SYNACK again */
+                /*
+                if(wait_recv(ctx->sockfd, packet, TH_SYN | TH_ACK, 500, 1) == 0) {
+                    ctx->connection_state = CSTATE_ESTABLISHED;
+                }
+                else {*/
+                    /* terminate connection */
+                /*else {*/
+                    /* terminate connection */
+                    close(ctx->sockfd);
+                    ctx->connection_state = CSTATE_CLOSED;
+/*                    exit_control_loop(1);*/
+
+               /* }*/
+                break;
+            default:
+                break;
+        }
+
+
+    }
+
+    printf("FIN handshaking passed\n");
+    printf("!! seq / ack active : %d %d\n", ctx->seq_active, ctx->ack_active);
+    printf("!! ack passive: %d\n", ctx->ack_passive);
+
+
+    ctx -> done = 1;
+    free(hdr);
+    free(packet);
+    return 0;
+}
+
+
+/**********************************************************************/
+/* transport_passive_close
+ *
+ * Called from child process at transport_sock_io()
+ */
+
+int transport_passive_close(context_t *ctx) {
+    int packetlen;
+    struct tcphdr *hdr = (struct tcphdr *)malloc(sizeof(struct tcphdr));
+    struct packet *packet = (struct packet *)malloc(sizeof(struct packet));
+
+    printf(">>transport_passive_close()\n");
+    while(ctx->connection_state != CSTATE_CLOSED) {
+        memset((void *)hdr, 0, sizeof(struct tcphdr));
+        memset((void *)packet, 0, sizeof(struct packet));
+        switch(ctx->connection_state) {
+            case CSTATE_CLOSE_WAIT:
+                printf("passive child: CLOSE_WAIT\n");
+                /* send FINACK */
+                packetlen = fill_header(hdr, ctx->seq_active, ctx->ack_passive, TH_FIN | TH_ACK, 0);
+                packet->pa_header = *hdr;
+                dump_packet(packet);
+                if(stcp_network_send(ctx->sockfd, (char *)packet, packetlen, NULL) == -1)
+                    perror("network_send");
+                ctx->connection_state = CSTATE_LAST_ACK;
+                break;
+            case CSTATE_LAST_ACK:
+                printf("passive child: LAST_ACK\n");
+                /* recv ACK */
+                if(wait_recv(ctx->sockfd, packet, TH_ACK, 0, 1) == 0) {
+
+                printf("CLOSED!!!!\n");
+                     ctx->ack_active = packet->pa_header.th_ack;
+                    /* terminate connection */
+               /*     close(ctx->sockfd);  */
+printf("dddd\n");
+                    ctx->connection_state = CSTATE_CLOSED;
+
+    printf("state: %d\n", ctx->connection_state);
+    /*exit_control_loop(1);*/
+                }
+                else ctx->connection_state = CSTATE_CLOSE_WAIT;
+                break;
+            default:
+                break;
+        }
+        printf("state: %d\n", ctx->connection_state);
+    }
+
+    printf("FIN handshaking passed\n");
+    printf("!! seq / ack active : %d %d\n", ctx->seq_active, ctx->ack_active);
+    printf("!! ack passive: %d\n", ctx->ack_passive);
+    ctx->done = 1;
+    close(ctx->sockfd);
+    free(hdr);
+    free(packet);
+    return 0;
+}
+
+
+
+/* generate random initial sequence number for an STCP connection */
+static void generate_initial_seq_num(context_t *ctx)
+{
+    assert(ctx);
+
+#ifdef FIXED_INITNUM
+    /* please don't change this! */
+    ctx->initial_sequence_num = 1;
+#else
+    /* you have to fill this up */
+    ctx->initial_sequence_num =rand()%256;
+#endif
+}
+
+
+/* control_loop() is the main STCP loop; it repeatedly waits for one of the
+ * following to happen:
+ *   - incoming data from the peer
+ *   - new data from the application (via mywrite())
+ *   - the socket to be closed (via myclose())
+ *   - a timeout
+ */
+static void control_loop(mysocket_t sd, context_t *ctx)
+{
+/* tag:control_loop */
+fprintf(stderr,"[control_loop] inside control_loop\n");
+    struct packet *p_packet;
+    struct packet *p_packet2;
+    
+    int datalen;
+    assert(ctx);
+
+    window recv_window;
+    window send_window;
+
+    win_init( &recv_window, WIN_RECV, ctx );
+    win_init( &send_window, WIN_SEND, ctx );
+	struct timespec *t = NULL;
+	/*set_timeout (ctx, t);*/
+/*	fprintf(stderr,"[Control Loop set timeout] %d %d %d\n",
+              t->tv_sec, t->tv_nsec, ctx->cong_estrtt); */
+
+    unsigned int event_towait = ANY_EVENT;
+    while (!ctx->done)
+    {
+        unsigned int event;
+        if (win_isfull(&send_window))
+            event_towait = TIMEOUT | NETWORK_DATA | APP_CLOSE_REQUESTED;
+        else
+            event_towait = ANY_EVENT;
+
+fprintf(stderr,"[control loop] loop all over again\n");
+fprintf(stderr,"[control loop] time out in %d seconds \n", t==NULL?-1:t->tv_sec);
+        /* see stcp_api.h or stcp_api.c for details of this function */
+        /* XXX: you will need to change some of these arguments! */
+fprintf(stderr,"waiting for event...");        
+        event = stcp_wait_for_event(sd, event_towait, t);
+fprintf(stderr,"got event!\n");
+/*		event = stcp_wait_for_event(sd, ANY_EVENT, NULL);*/
+        /* check whether it was the network, app, or a close request */
+        if (event & APP_DATA)  /* recv from app */
+        {
+fprintf(stderr,"[control_loop] event: APP_DATA\n");
+            datalen = get_data_app(sd, ctx, &p_packet); 
+            fill_header(&(p_packet->pa_header), ctx->seq_active,0,0,datalen);
+            win_enqueue(&send_window, p_packet, datalen);
+            update_timeout(ctx, t,&send_window);
+        }
+        if (event & NETWORK_DATA) /* recv from network */
+        {
+fprintf(stderr,"[control_loop] event: NETWORK_DATA\n");
+            p_packet = malloc(sizeof(struct packet));
+            datalen = stcp_network_recv(sd, (void*)(p_packet), sizeof(struct packet));
+fprintf(stderr,"received %d bytes from network, headersize: %d bytes\n",datalen, sizeof(struct tcphdr));
+            datalen -= sizeof(struct tcphdr);
+            uint8_t flag = 0;
+            flag = p_packet->pa_header.th_flags;
+             
+fprintf(stderr,"before list of if\n");
+            /* if recv ack, change context and dequeue send window */
+            if (flag & TH_ACK){
+                fprintf(stderr,"Got ACK\n");
+                ctx->ack_active = p_packet->pa_header.th_ack;
+                win_dequeue( &send_window );
+                update_timeout(ctx, t,&send_window);
+            }
+
+            /* if recv data, add to recv window */
+            if (datalen > 0){
+               /* How about writing to the application layer??*/
+                fprintf(stderr,"Got Data\n");
+                win_enqueue( &recv_window, p_packet, datalen );
+                win_dequeue( &recv_window );
+              /* Need to send ACK as well?*/
+            }
+            
+            /* if recv FIN, passive close */
+            if (flag & TH_FIN){
+                    /* TODO */
+                fprintf(stderr, "Got Fin\n");
+                ctx->ack_passive = p_packet->pa_header.th_seq;
+                ctx->connection_state = CSTATE_CLOSE_WAIT;
+                free(p_packet);
+                transport_passive_close(ctx);
+                return;
+            }
+        }
+        if (event & TIMEOUT){
+            fprintf(stderr,"********************Got Timeout*************************\n");
+        	window_node ** pt_next_wn;
+        	pt_next_wn = &( send_window.win_buf);
+        	while((*pt_next_wn) != NULL){        		
+        		retransmit ( ctx, *pt_next_wn );
+        		pt_next_wn = &((*pt_next_wn)->wn_next) ;
+        	}
+        }
+        if (event & APP_CLOSE_REQUESTED){ /* active close */
+            /* TODO  */         
+	    	printf("Got closing request from the application\n");
+            if(ctx->seq_active == ctx->ack_active){
+            	/* Closing Control */
+            	transport_active_close(ctx);
+            	return;
+            }
+        }    
+    }
+}
+
+/* get data from app and encapsulate it into a packet, filling header with 0. */
+int get_data_app(mysocket_t sd, context_t *ctx, struct packet ** p_packet)
+{        
+        int datalen;
+        *p_packet = (struct packet *)malloc(sizeof(struct packet));
+        memset((void *)(*p_packet), 0, sizeof(struct packet));  
+        datalen = stcp_app_recv(ctx->sockfd, (char *)(*p_packet)->data, 536);
+        return datalen;
+}
+
+int send_packet (context_t *ctx, struct packet *pckt, int datalen, int flag)
+{
+        struct tcphdr *hdr;
+        int packetlen;
+        unsigned int sent;
+ 	if(flag==1){
+fprintf(stderr,"*** [send_packet]: about to send data to network\n",sent);
+        	sent = stcp_network_send (ctx->sockfd, (char *)pckt, sizeof(struct tcphdr) + datalen, NULL);
+fprintf(stderr,"*** [send_packet]: data sent to network, sent %d bytes\n",sent);
+                return sent;
+        }
+        else{
+fprintf(stderr,"*** [send_packet]: about to send data to app\n");
+		stcp_app_send (ctx->sockfd, (char *)pckt->data, datalen);
+fprintf(stderr,"*** [send_packet]: data sent to app\n");
+                return 0;
+        }
+        free(hdr);
+        free(pckt);
+}
+
+
+/**********************************************************************/
+/* our_dprintf
+ *
+ * Send a formatted message to stdout.
+ * 
+ * format               A printf-style format string.
+ *
+ * This function is equivalent to a printf, but may be
+ * changed to log errors to a file if desired.
+ *
+ * Calls to this function are generated by the dprintf amd
+ * dperror macros in transport.h
+ */
+void our_dprintf(const char *format,...)
+{
+    va_list argptr;
+    char buffer[1024];
+
+    assert(format);
+    va_start(argptr, format);
+    vsnprintf(buffer, sizeof(buffer), format, argptr);
+    va_end(argptr);
+    fputs(buffer, stdout);
+    fflush(stdout);
+}
+
+void estimate_rtt (context_t *ctx, struct timeval sendtime)
+{
+	struct timeval t;
+    gettimeofday (&t, NULL);   
+    long int sample_rtt;
+    sample_rtt = 1000000 * (t.tv_sec - sendtime.tv_sec) + t.tv_usec - sendtime.tv_usec;
+    ctx->cong_estrtt = (long int)(0.875 * ctx->cong_estrtt + 0.125 * sample_rtt);
+}
+void retransmit (context_t *ctx, window_node *seg )
+{
+fprintf(stderr, "************retransmiting***********\n");
+    int rv = -1;
+    while (rv == -1) {
+            /* retransmit using Go-Back-N */
+    	if (ctx->connection_state == CSTATE_LAST_ACK) {
+        	ctx->connection_state = CSTATE_CLOSED;
+        	ctx->done = TRUE;
+    	}	
+	    while (seg) {                
+    	    seg->wn_retransmitcnt++;
+    	    if (seg->wn_retransmitcnt > 5){
+    	       	fprintf(stderr,"Network down!!");
+    	        ctx->done = TRUE;
+    	    }
+			rv = stcp_network_send(ctx->sockfd,(char *)seg->wn_packet, seg->wn_datalen,NULL);
+    	    gettimeofday (&seg->wn_sendtime, NULL);
+    	    if(rv < 0)
+			fprintf(stderr,"Packet sending failed!!");               
+    	    seg = seg->wn_next;
+    	}            
+    }
+}
+
+void update_timeout(context_t *ctx, struct timespec *t, window *pt_win){
+    struct timeval rtt_timeout;
+/* TODO: change the next line: need null check */
+
+    struct timeval packet_time;
+    if (pt_win->win_buf == NULL){
+        if (t!=NULL)
+            free(t);
+        t = NULL;
+    }
+    else{
+        if (t==NULL)
+            t = (struct timespec *) malloc(sizeof(struct timespec));
+        packet_time = (pt_win->win_buf)->wn_sendtime;
+        rtt_timeout.tv_sec = (int)(ctx->cong_estrtt/1000000);
+        rtt_timeout.tv_usec = ctx->cong_estrtt - rtt_timeout.tv_sec * 1000000;
+        /* convert to timespec */
+        t->tv_nsec = (rtt_timeout.tv_usec + packet_time.tv_usec )* 1000;
+        t->tv_sec = (rtt_timeout.tv_sec + packet_time.tv_sec); 
+fprintf(stderr,"------update timeout----->>timeout is set to %ld sec\n",t->tv_sec);
+    }
+}
+/*
+void set_timeout (context_t *ctx, struct timespec *t){
+    // Just return currect time plus estimated_rtt	
+    struct timeval rtt_timeout, current_time;
+    gettimeofday( &current_time ,NULL);
+    rtt_timeout.tv_sec = (int)(ctx->cong_estrtt/1000000);
+    rtt_timeout.tv_usec = ctx->cong_estrtt - rtt_timeout.tv_sec * 1000000;
+    // convert to timespec 
+    t->tv_nsec = ( rtt_timeout.tv_usec + current_time.tv_usec )* 1000;
+    t->tv_sec = ( rtt_timeout.tv_sec+ current_time.tv_sec);
+    return t;
+}
+
+*/
+
+
+
+
+
+
+
