@@ -29,15 +29,6 @@ enum {CSTATE_ESTABLISHED,
     CSTATE_LAST_ACK,
     CSTATE_TIME_WAIT
     };    /* obviously you should have more states */
-/*
-struct packet
-{
-    struct tcphdr pa_header; 
-#define MAX_PACKET_SIZE 536
-    char data[MAX_PACKET_SIZE];
-};
-*/
-
 
 static void generate_initial_seq_num(context_t *ctx);
 static void control_loop(mysocket_t sd, context_t *ctx);
