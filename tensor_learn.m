@@ -31,6 +31,7 @@ for ii=1:nd
 end
 
 % update beta
+
 G = cell(nd,1);
 for ii=1:nd
     G{ii} = F{ii}*U{ii};
@@ -46,10 +47,18 @@ for kk=nd-1:-1:1
     acc2 = kron(acc2, G{kk}'*G{kk});
 end
 
+% regularization term
+for kk=1:nd
+    tmp = kron(eye(prod(mlrank([1:kk-1,kk+1:end]))),U{kk}'*U{kk});
+    acc2 = acc2 + 0.5*Gb(kk,mlrank)*tmp*Gf(kk,mlrank);
+end
+
 LHS=acc2;
 RHS=vec(acc1);
 beta=LHS\RHS;
 
+fprintf('%f\n', norm(beta));
+beta = kfold(beta, mlrank, 1);
 
 
 

@@ -9,8 +9,8 @@
 
 function X = kfold(A, sz, k)
 
-if sz(k) ~= size(A,1) || prod(sz) ~= numel(A)
-    error('size of input matrix A is incompatible with sz (or k)');
+if prod(sz) ~= numel(A)
+    error('size of input matrix A does not match sz');
 end
 nd = length(sz);
 sz2 = sz([k:nd, 1:k-1]);
