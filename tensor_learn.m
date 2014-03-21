@@ -1,15 +1,15 @@
 addpath('../tensor');
 
 %% input arguments
-X = randn(3,4,5); % tensor to approximate
+X = randn(6,4,5); % tensor to approximate
 K = cell(3,1); % gram matrix
-K{1} = eye(3); K{2} = eye(4); K{3} = eye(5);
+K{1} = eye(6); K{2} = eye(4); K{3} = eye(5);
 
-RankBound = [3,3,3]; % upperbound of mode-k rank
-lambda = 1;
+RankBound = [6,4,5]; % upperbound of mode-k rank
+lambda = 0;
 
 %% parameters
-
+tol = 1e-4;
 
 
 %% main
@@ -25,11 +25,22 @@ end
 
 % initialization
 beta = randn(mlrank);
+% beta = beta0;
 U = cell(nd,1);
 for ii=1:nd
-    U{ii} = rand(sz(ii), mlrank(ii));
+    U{ii} = randn(sz(ii), mlrank(ii));
 end
 
+for iter=1:10
+    
+X_est = beta;
+for kk=1:nd
+    X_est = tensorkmat(X_est,F{kk}*U{kk},kk);
+end
+fprintf('%f\n', sqrt(sum((X_est(:)-X(:)).^2)));
+    
+    
+    
 % update beta
 
 G = cell(nd,1);
@@ -48,18 +59,55 @@ for kk=nd-1:-1:1
 end
 
 % regularization term
+reg=0;
 for kk=1:nd
     tmp = kron(eye(prod(mlrank([1:kk-1,kk+1:end]))),U{kk}'*U{kk});
-    acc2 = acc2 + 0.5*Gb(kk,mlrank)*tmp*Gf(kk,mlrank);
+    reg = reg + lambda*0.5*Gb(kk,mlrank)*tmp*Gf(kk,mlrank);
 end
 
-LHS=acc2;
+LHS=acc2+reg;
 RHS=vec(acc1);
-beta=LHS\RHS;
+if norm(LHS*vec(beta) - RHS, 'fro') > tol
+    beta=LHS\RHS;
+    beta = kfold(beta, mlrank, 1);
+end
 
-fprintf('%f\n', norm(beta));
-beta = kfold(beta, mlrank, 1);
+% update U
+for kk=1:nd
 
+    acc_loc = 1;
+    for ll=[nd:-1:(kk+1),(kk-1):-1:1]
+        acc_loc = kron(acc_loc, G{ll});
+    end
+    acc_loc = acc_loc*flatten(beta, kk)';
+    T = kron( acc_loc, F{kk});
+    
+    % regularization term
+    mqb_loc = flatten(beta, kk);
+    reg = kron(mqb_loc*mqb_loc',  eye(sz(kk)));
+    
+    for ll=[1:(kk-1),(kk+1):nd]
+        acc2 = 1;
+        for jj=1:nd
+            if jj==kk || jj==ll
+                continue;
+            end
+            acc2 = acc2*norm(U{jj},'fro')^2;
+        end
+        reg = reg+acc2*eye(numel(U{kk}));
+    end
+    
+    LHS = T'*T + lambda*reg;
+    RHS = T'*vec(flatten(X,kk));
+    if norm(LHS*vec(U{kk}) - RHS, 'fro') > tol
+        U{kk} = LHS\RHS;
+        U{kk} = kfold(U{kk}, [sz(kk), mlrank(kk)], 1);
+    end
+end
+
+fprintf('%f  %f  %f\n', norm(U{1}), norm(U{2}), norm(U{3}));
+
+end
 
 
 
