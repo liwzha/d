@@ -1,3 +1,4 @@
+% not in use
 function Z = outer_group(varargin)
 
 nd = length(varargin);
