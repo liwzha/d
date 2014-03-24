@@ -1,12 +1,17 @@
+clear all; close all; clc;
+
 addpath('../tensor');
 
 %% input arguments
-X = randn(6,4,5); % tensor to approximate
-K = cell(3,1); % gram matrix
-K{1} = eye(6); K{2} = eye(4); K{3} = eye(5);
+sz_X = [10, 8];
+X = randn(sz_X); % tensor to approximate
+K = cell(length(sz_X),1); % gram matrix
+for kk = 1:length(sz_X)
+    K{kk} = eye(sz_X(kk));
+end
 
-RankBound = [6,4,5]; % upperbound of mode-k rank
-lambda = 0;
+RankBound = [10,8]; % upperbound of mode-k rank
+lambda = 10;
 
 %% parameters
 tol = 1e-4;
@@ -16,28 +21,20 @@ tol = 1e-4;
 % handle input
 sz = size(X);
 nd = ndims(X);
-mlrank = RankBound;
+mlr = RankBound;
 F = cell(size(K));
 for ii=1:length(K)
     F{ii} = K{ii}^0.5;
 end
 
 % initialization
-beta = randn(mlrank);
+beta = randn(mlr);
 U = cell(nd,1);
 for ii=1:nd
-    U{ii} = randn(sz(ii), mlrank(ii));
+    U{ii} = randn(sz(ii), mlr(ii));
 end
 
 for iter=1:10
-    
-    X_est = beta;
-    for kk=1:nd
-        X_est = tensorkmat(X_est,F{kk}*U{kk},kk);
-    end
-%     fprintf('before update beta: %f\n', sqrt(sum((X_est(:)-X(:)).^2)));
-    
-    
     
     % update beta
     
@@ -59,15 +56,15 @@ for iter=1:10
     % regularization term
     reg=0;
     for kk=1:nd
-        tmp = kron(eye(prod(mlrank([1:kk-1,kk+1:end]))),U{kk}'*U{kk});
-        reg = reg + lambda*0.5*Gb(kk,mlrank)*tmp*Gf(kk,mlrank);
+        tmp = kron(eye(prod(mlr([1:kk-1,kk+1:end]))),U{kk}'*U{kk});
+        reg = reg + lambda*0.5*Gb(kk,mlr)*tmp*Gf(kk,mlr);
     end
     
     LHS=acc2+reg;
     RHS=vec(acc1);
     if norm(LHS*vec(beta) - RHS, 'fro') > tol
         beta=LHS\RHS;
-        beta = kfold(beta, mlrank, 1);
+        beta = kfold(beta, mlr, 1);
         
         X_est = beta;
         for kk=1:nd
@@ -77,7 +74,7 @@ for iter=1:10
     end
     
     % update U
-    for kk=1:3
+    for kk=1:nd
         
         acc_loc = 1;
         for ll=[nd:-1:(kk+1),(kk-1):-1:1]
@@ -107,11 +104,11 @@ for iter=1:10
             U{kk} = LHS\RHS;
             
             % normalize U
-            norm_const = norm(U{kk}, 'fro');
-            U{kk} = U{kk} / norm_const;
-            beta = beta*norm_const;
+%             norm_const = norm(U{kk}, 'fro');
+%             U{kk} = U{kk} / norm_const;
+%             beta = beta*norm_const;
             
-            U{kk} = kfold(U{kk}, [sz(kk), mlrank(kk)], 1);
+            U{kk} = kfold(U{kk}, [sz(kk), mlr(kk)], 1);
             
         end
         
@@ -122,6 +119,12 @@ for iter=1:10
 
         
     end
+    
+    X_est = beta;
+    for kk=1:nd
+        X_est = tensorkmat(X_est,F{kk}*U{kk},kk);
+    end
+    fprintf('error: %f\n', sqrt(sum((X_est(:)-X(:)).^2)));
     
 end
 
