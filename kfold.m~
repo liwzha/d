@@ -37,4 +37,5 @@ end
 nd = length(sz);
 sz2 = sz([k, 1:k-1, (k+1):nd]);
 X = reshape(A, sz2);
-X = permute(X, [2:k,1,(k+1):nd]);
+% X = permute(X, [(nd-k+2):nd, 1:(nd-k+1)]);
+X = permute(X, [2(nd-k+2):nd, 1:(nd-k+1)]);

@@ -1,20 +1,18 @@
 clear all; close all; clc;
 
-addpath('../tensor');
-
 %% input arguments
-sz_X = [10, 8];
+sz_X = [10, 8, 20];
 X = randn(sz_X); % tensor to approximate
 K = cell(length(sz_X),1); % gram matrix
 for kk = 1:length(sz_X)
     K{kk} = eye(sz_X(kk));
 end
 
-RankBound = [10,8]; % upperbound of mode-k rank
-lambda = 10;
+RankBound = [10,8,20]; % upperbound of mode-k rank
+lambda = 0.1;
 
 %% parameters
-tol = 1e-4;
+tol = 1e-8;
 
 %% main
 
@@ -104,9 +102,9 @@ for iter=1:10
             U{kk} = LHS\RHS;
             
             % normalize U
-%             norm_const = norm(U{kk}, 'fro');
-%             U{kk} = U{kk} / norm_const;
-%             beta = beta*norm_const;
+            norm_const = norm(U{kk}, 'fro');
+            U{kk} = U{kk} / norm_const;
+            beta = beta*norm_const;
             
             U{kk} = kfold(U{kk}, [sz(kk), mlr(kk)], 1);
             
