@@ -1,25 +1,24 @@
 clear all; close all;
 
-
-L = 20;
-N = 20;
+L = 30;
+N = 5;
 
 [Xgrid,Ygrid] = meshgrid(1:L,1:L);
 D = double(abs(Xgrid-Ygrid));
 
 % template = sin(linspace(0,pi,L/2));
-template = sin(linspace(0,2*pi,L/4)) + 3;
+template = sin(linspace(0,4*pi,L/2)) + 3;
 
 X = zeros(N,L);
 for ii=1:N
     % random shift
 %     start = randi(L-length(template));
-    start = 5+randi(3);
+    start = 2+randi(10);
     X(ii, (1+start):(1+start+length(template)-1)) = template;
 end
 
 % random noise
-X = X + 0.1*rand(size(X));
+X = X + 0.3*rand(size(X));
 figure(1);
 plot(X');
 
@@ -28,15 +27,17 @@ plot(X');
 br = mean(X)';
 
 for iter =1:50
+    fprintf('iter #%d\n', iter);
     alpha = zeros(L,1);
     for ii=1:N
+        fprintf('ii = #%d\n', ii);
         xi = X(ii,:);
         xi = reshape(xi,[numel(xi),1]);
         ai = sum(xi) / sum(br);
         aib = ai*br;
         
         % dual
-        A = sparse([kron(eye(L),ones(L,1)), kron(ones(L,1),eye(L))]);
+        A = sparse([kron(sparse(eye(L)),ones(L,1)), kron(ones(L,1),sparse(eye(L)))]);
         b = D(:);
         f = -[aib;xi];
         alpha_beta_i = linprog(f,A,b);
