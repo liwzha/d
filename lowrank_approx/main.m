@@ -1,19 +1,19 @@
 clear all; close all;
 
-L = 30;
-N = 5;
+L = 100;
+N = 50;
 
 [Xgrid,Ygrid] = meshgrid(1:L,1:L);
 D = double(abs(Xgrid-Ygrid));
 
 % template = sin(linspace(0,pi,L/2));
-template = sin(linspace(0,4*pi,L/2)) + 3;
+template = sin(linspace(0,4*pi,L/3)) + 3;
 
 X = zeros(N,L);
 for ii=1:N
     % random shift
 %     start = randi(L-length(template));
-    start = 2+randi(10);
+    start = 2+randi(20);
     X(ii, (1+start):(1+start+length(template)-1)) = template;
 end
 

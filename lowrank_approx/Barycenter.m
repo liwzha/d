@@ -22,8 +22,10 @@ t0 = 0.2;
 t = 1;
 
 a = 1/L*ones(L,1);
-% a=X(1,:)';
-objec_record = [];
+a_hat = a;
+a_tilde = a;
+
+% objec_record = [];
 
 for iter=1:300
     fprintf('iter #%d\n', iter);
@@ -33,7 +35,8 @@ for iter=1:300
     plot(a);
     drawnow;
     
-    gamma = 1/t;
+    beta = (1+t)/2;
+    a = (1-1/beta)*a_hat + 1/beta*a_tilde;
     
     objec = 0;
     % form subgradient
@@ -68,16 +71,11 @@ for iter=1:300
     alpha = alpha / N;
     
     fprintf('loss = %f\n', objec);
-    objec_record = [objec_record, objec];
+%     objec_record = [objec_record, objec];
     
-   
-    % Polyak
-    step_size = gamma / norm(alpha);
-    while( min(a-step_size*alpha)<0 )
-        step_size = step_size*0.8;
-    end
-    a = a - step_size*alpha;
-    a = a / norm(a,1);
+    a_tilde = a_tilde.*exp(-t0*beta*alpha);
+    a_tilde = a_tilde / norm(a_tilde,1);
+    a_hat = (1-1/beta)*a_hat + 1/beta*a_tilde;
     
     t = t+1;
 
