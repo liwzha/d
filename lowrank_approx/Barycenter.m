@@ -21,7 +21,7 @@ plot(X');
 t0 = 0.2;
 t = 1;
 
-a = 1/L*ones(L,1);
+a = 1/L*ones(L,1)*mean(sum(X,2));
 a_hat = a;
 a_tilde = a;
 
@@ -56,8 +56,15 @@ for iter=1:300
 %         alpha_i = alpha_beta_i(1:L);
         
         % sinkhorn        
-        [D, ~, u, ~]=sinkhornTransport(a,xi,K,U,lambda,[],[],[],[],0);
-        alpha_i = 1/lambda*( log(u)+0.5 );
+%         [D, ~, u, ~]=sinkhornTransport(a,xi,K,U,lambda,[],[],[],[],0);
+%         alpha_i = 1/lambda*( log(u)+0.5 );
+
+        % generalized OT
+        
+        m = min(min(a), min(xi));
+        a2 = a-m;  xi2 = xi-m;
+        [D, alpha_i] = generalizedOTDistance(a2/sum(a2)*sum(xi2),xi2,K,U,lambda,[],[],[],[],0);
+        alpha_i = alpha_i*sum(xi2)/sum(a2);
         
         objec = objec+D;
         

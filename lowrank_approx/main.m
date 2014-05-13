@@ -1,24 +1,25 @@
 clear all; close all;
 
-L = 100;
-N = 50;
+L = 30;
+N = 20;
 
 [Xgrid,Ygrid] = meshgrid(1:L,1:L);
 D = double(abs(Xgrid-Ygrid));
 
 % template = sin(linspace(0,pi,L/2));
-template = sin(linspace(0,4*pi,L/3)) + 3;
+template = sin(linspace(0,4*pi,2*L/3)) + 3;
 
 X = zeros(N,L);
 for ii=1:N
     % random shift
 %     start = randi(L-length(template));
-    start = 2+randi(20);
+    start = 2+randi(5);
     X(ii, (1+start):(1+start+length(template)-1)) = template;
 end
 
 % random noise
 X = X + 0.3*rand(size(X));
+% X = diag(rand(N,1))*X;
 figure(1);
 plot(X');
 
