@@ -1,12 +1,12 @@
 function bc = Barycenter(X)
-% X - each row is a signal.  each signal is a probability measure.
+% X - each row is a signal.  
 
 [N, L] = size(X);
 
 % cost matrix
 [Xgrid,Ygrid] = meshgrid(1:L,1:L);
 M = abs(Xgrid - Ygrid);
-lambda = 200;
+lambda = 1000;
 K=exp(-lambda*M);
 K(K<1e-100)=1e-100;
 U=K.*M;
@@ -14,6 +14,10 @@ U=K.*M;
 figure(1);
 subplot(1,2,1);
 plot(X');
+axis([1,L,min(X(:)),max(X(:))]);
+
+subplot(1,2,2);
+axis([1,L,0,1]);
 
 % prox-function (for Bregman divergence)
 % w = @(x) sum(x.^2);
@@ -59,12 +63,19 @@ for iter=1:300
 %         [D, ~, u, ~]=sinkhornTransport(a,xi,K,U,lambda,[],[],[],[],0);
 %         alpha_i = 1/lambda*( log(u)+0.5 );
 
+
         % generalized OT
         
-        m = min(min(a), min(xi));
-        a2 = a-m;  xi2 = xi-m;
-        [D, alpha_i] = generalizedOTDistance(a2/sum(a2)*sum(xi2),xi2,K,U,lambda,[],[],[],[],0);
-        alpha_i = alpha_i*sum(xi2)/sum(a2);
+%         m = min(min(a), min(xi));
+%         a2 = a-m;  xi2 = xi-m;
+%         [D, alpha_i] = generalizedOTDistance(a2/sum(a2)*sum(xi2),xi2,K,U,lambda,[],[],[],[],0);
+%         alpha_i = alpha_i*sum(xi2)/sum(a2);
+%         D = OTDistance_1D(a2/sum(a2)*sum(xi2),xi2);
+        
+        a_ir = sum(xi)/sum(a);
+        [D, alpha_i] = generalizedOTDistance(a_ir*a,xi,K,U,lambda,[],[],[],[],0);
+        alpha_i = alpha_i/a_ir;
+        D = OTDistance_1D(a_ir*a,xi);
         
         objec = objec+D;
         

@@ -1,7 +1,14 @@
 function [dist, grad] = generalizedOTDistance(a,b,K,U,lambda,stoppingCriterion,p_norm,tolerance,maxIter,VERBOSE)
 
+%%
 pos = (a-b).*((a-b)>0);
 neg = -(a-b).*((a-b)<0);
+
+% smooth a little to avoid log(0) in alpha and beta
+eps = 0.0001/length(a);
+pos = pos+eps;
+neg = neg+eps;
+
 C = sum(pos);
 
 [D, ~, u, v]=sinkhornTransport(pos/C,neg/C,K,U,lambda,stoppingCriterion,p_norm,tolerance,maxIter,VERBOSE);
@@ -14,6 +21,7 @@ alpha(isinf(alpha))=0;
 beta(isinf(beta))=0;
 grad = C*alpha - C*beta;
 
+%%
 % C = sum(a);
 % [D, ~, u, v] = sinkhornTransport(a/C,b/C,K,U,lambda,stoppingCriterion,p_norm,tolerance,maxIter,VERBOSE);
 % dist = D*C;
